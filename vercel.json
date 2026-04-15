@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/app-data/:match*", "destination": "https://umami.tail824e95.ts.net/:match*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
