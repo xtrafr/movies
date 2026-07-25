@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Film, Server } from 'lucide-react';
 
 const SERVERS = [
-  { id: 'vidcore', label: 'VidCore', baseUrl: 'https://vidcore.org/embed' },
   { id: 'vidphantom', label: 'VidPhantom', baseUrl: 'https://vidphantom.com' },
+  { id: 'vidcore', label: 'VidCore', baseUrl: 'https://vidcore.org/embed' },
   { id: 'vidking', label: 'VidKing', baseUrl: 'https://www.vidking.net/embed' },
   { id: '2embed', label: '2Embed', baseUrl: 'https://www.2embed.stream/embed' },
 ];
