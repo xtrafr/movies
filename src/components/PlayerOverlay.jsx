@@ -200,7 +200,7 @@ const PlayerOverlay = ({ item, onClose }) => {
               src={embedUrl}
               className="player-iframe"
               allowFullScreen
-              sandbox="allow-forms allow-scripts allow-same-origin allow-presentation"
+
               title="Video Player"
               key={`${activeServer}-${activeSeason}-${currentEpisode}`}
             />
