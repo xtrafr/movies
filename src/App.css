@@ -909,47 +909,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Server Switcher */
-.server-switcher {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.server-chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: inherit;
-}
-
-.server-chip:hover {
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.server-chip.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 12px rgba(94, 106, 210, 0.35);
-}
-
-.server-chip-num {
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
 /* Player Buttons */
 .player-btn {
   width: 32px;
@@ -1016,33 +975,6 @@ body {
   gap: 0.5rem;
 }
 
-.nav-ep-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.nav-ep-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.nav-ep-btn:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-
 /* Season Dropdown */
 .nav-season-selector {
   position: relative;
@@ -1082,6 +1014,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   min-width: 220px;
+  max-width: calc(100vw - 32px);
   max-height: 260px;
   overflow-y: auto;
   background: rgba(12, 12, 18, 0.97);
@@ -1091,6 +1024,12 @@ body {
   backdrop-filter: blur(20px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   z-index: 100;
+}
+
+.season-dropdown.episode-dropdown {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 .season-dropdown::-webkit-scrollbar { width: 4px; }
@@ -1344,9 +1283,6 @@ body {
   }
   .player-top-bar {
     padding: 0 0.75rem;
-  }
-  .server-switcher {
-    display: none;
   }
 }
 

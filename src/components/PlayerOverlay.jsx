@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, List, Server, ChevronDown, ChevronRight, Monitor, Tv, Film } from 'lucide-react';
+import { X, Play, List, ChevronDown, ChevronRight, Film } from 'lucide-react';
 
-const SERVERS = [
-  { id: 'vidking', label: 'Server 1', icon: Monitor, baseUrl: 'https://www.vidking.net/embed' },
-  { id: 'vidplays', label: 'Server 2', icon: Server, baseUrl: 'https://vidplays.fun/embed' },
-  { id: 'vidfun', label: 'Server 3', icon: Tv, baseUrl: 'https://vidfun.pro' },
-];
+const EMBED_BASE = 'https://www.vidking.net/embed';
 
 const PlayerOverlay = ({ item, onClose }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeServer, setActiveServer] = useState('vidking');
   const [showSidebar, setShowSidebar] = useState(false);
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeason] = useState(1);
@@ -18,6 +13,7 @@ const PlayerOverlay = ({ item, onClose }) => {
   const [currentEpisode, setCurrentEpisode] = useState(1);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
+  const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
 
   const id = item?.id;
   const type = item?.media_type || 'movie';
@@ -72,13 +68,11 @@ const PlayerOverlay = ({ item, onClose }) => {
   }, [id, type, activeSeason]);
 
   const embedUrl = useMemo(() => {
-    const server = SERVERS.find(s => s.id === activeServer);
-    if (!server) return '';
     if (type === 'movie') {
-      return `${server.baseUrl}/movie/${id}`;
+      return `${EMBED_BASE}/movie/${id}?autoplay=true`;
     }
-    return `${server.baseUrl}/tv/${id}/${activeSeason}/${currentEpisode}`;
-  }, [activeServer, id, type, activeSeason, currentEpisode]);
+    return `${EMBED_BASE}/tv/${id}/${activeSeason}/${currentEpisode}?autoplay=true`;
+  }, [id, type, activeSeason, currentEpisode]);
 
   const handleKey = useCallback((e) => {
     if (e.key === 'Escape') {
@@ -86,32 +80,12 @@ const PlayerOverlay = ({ item, onClose }) => {
       else onClose();
     }
     if (e.key === 'c') setShowSidebar(prev => !prev);
-    if (e.key === 's') {
-      setActiveServer(prev => {
-        const idx = SERVERS.findIndex(s => s.id === prev);
-        return SERVERS[(idx + 1) % SERVERS.length].id;
-      });
-    }
   }, [onClose, isFullscreen]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
-
-  const goToNextEpisode = () => {
-    const currentIdx = episodes.findIndex(ep => ep.episode_number === currentEpisode);
-    if (currentIdx < episodes.length - 1) {
-      setCurrentEpisode(episodes[currentIdx + 1].episode_number);
-    }
-  };
-
-  const goToPrevEpisode = () => {
-    const currentIdx = episodes.findIndex(ep => ep.episode_number === currentEpisode);
-    if (currentIdx > 0) {
-      setCurrentEpisode(episodes[currentIdx - 1].episode_number);
-    }
-  };
 
   const goToNextSeason = () => {
     const idx = seasons.findIndex(s => s.season_number === activeSeason);
@@ -126,10 +100,6 @@ const PlayerOverlay = ({ item, onClose }) => {
       setActiveSeason(seasons[idx - 1].season_number);
     }
   };
-
-  const currentEpIdx = episodes.findIndex(ep => ep.episode_number === currentEpisode);
-  const hasNextEpisode = currentEpIdx < episodes.length - 1;
-  const hasPrevEpisode = currentEpIdx > 0;
 
   if (!item) return null;
 
@@ -160,33 +130,14 @@ const PlayerOverlay = ({ item, onClose }) => {
           </div>
 
           <div className="player-controls-right">
-            <div className="server-switcher">
-              {SERVERS.map((server, i) => {
-                const Icon = server.icon;
-                return (
-                  <button
-                    key={server.id}
-                    className={`server-chip ${activeServer === server.id ? 'active' : ''}`}
-                    onClick={() => setActiveServer(server.id)}
-                    title={server.label}
-                  >
-                    <Icon size={13} />
-                    <span className="server-chip-num">{i + 1}</span>
-                  </button>
-                );
-              })}
-            </div>
-
             {type === 'tv' && (
-              <>
-                <button
-                  className={`player-btn ${showSidebar ? 'active' : ''}`}
-                  onClick={() => setShowSidebar(!showSidebar)}
-                  title="Episodes"
-                >
-                  <List size={16} />
-                </button>
-              </>
+              <button
+                className={`player-btn ${showSidebar ? 'active' : ''}`}
+                onClick={() => setShowSidebar(!showSidebar)}
+                title="Episodes"
+              >
+                <List size={16} />
+              </button>
             )}
             <button className="player-btn close" onClick={onClose} title="Close">
               <X size={18} />
@@ -202,24 +153,15 @@ const PlayerOverlay = ({ item, onClose }) => {
               allowFullScreen
 
               title="Video Player"
-              key={`${activeServer}-${activeSeason}-${currentEpisode}`}
+              key={`${activeSeason}-${currentEpisode}`}
             />
 
             {type === 'tv' && (
               <div className="player-bottom-nav">
-                <button
-                  className="nav-ep-btn"
-                  disabled={!hasPrevEpisode}
-                  onClick={goToPrevEpisode}
-                >
-                  <ChevronRight size={16} style={{ transform: 'rotate(180deg)' }} />
-                  <span>Prev</span>
-                </button>
-
                 <div className="nav-season-selector">
                   <button
                     className="season-dropdown-trigger"
-                    onClick={() => setShowSeasonDropdown(!showSeasonDropdown)}
+                    onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
                   >
                     <span>Season {activeSeason}</span>
                     <ChevronDown size={14} className={showSeasonDropdown ? 'rotated' : ''} />
@@ -254,14 +196,43 @@ const PlayerOverlay = ({ item, onClose }) => {
                   </AnimatePresence>
                 </div>
 
-                <button
-                  className="nav-ep-btn"
-                  disabled={!hasNextEpisode}
-                  onClick={goToNextEpisode}
-                >
-                  <span>Next</span>
-                  <ChevronRight size={16} />
-                </button>
+                <div className="nav-season-selector">
+                  <button
+                    className="season-dropdown-trigger"
+                    onClick={() => { setShowEpisodeDropdown(!showEpisodeDropdown); setShowSeasonDropdown(false); }}
+                  >
+                    <span>Episode {currentEpisode}</span>
+                    <ChevronDown size={14} className={showEpisodeDropdown ? 'rotated' : ''} />
+                  </button>
+                  <AnimatePresence>
+                    {showEpisodeDropdown && (
+                      <motion.div
+                        className="season-dropdown episode-dropdown"
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                        transition={{ duration: 0.15 }}
+                      >
+                        {episodes.map(ep => (
+                          <button
+                            key={ep.id}
+                            className={`season-option ${currentEpisode === ep.episode_number ? 'active' : ''}`}
+                            onClick={() => {
+                              setCurrentEpisode(ep.episode_number);
+                              setShowEpisodeDropdown(false);
+                            }}
+                          >
+                            <span className="season-opt-num">{ep.episode_number}</span>
+                            <div className="season-opt-info">
+                              <span className="season-opt-name">{ep.name}</span>
+                              {ep.runtime ? <span className="season-opt-count">{ep.runtime}m</span> : null}
+                            </div>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             )}
           </div>
