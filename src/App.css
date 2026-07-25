@@ -809,9 +809,9 @@ body {
 .player-background {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .player-background::before {
@@ -820,256 +820,533 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 80vw;
-  height: 80vh;
-  background: radial-gradient(circle at center, var(--accent-glow) 0%, transparent 60%);
-  filter: blur(100px);
-  opacity: 0.8;
+  width: 70vw;
+  height: 70vh;
+  background: radial-gradient(circle at center, rgba(94, 106, 210, 0.12) 0%, transparent 60%);
+  filter: blur(80px);
   z-index: -1;
 }
 
-.player-container-new {
+/* Shell */
+.player-shell {
   position: relative;
   z-index: 10;
   background: #000;
-  border: 1px solid var(--border-strong);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8), 0 0 40px rgba(94, 106, 210, 0.1);
+  box-shadow:
+    0 50px 100px -20px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 60px rgba(94, 106, 210, 0.06);
   display: flex;
   flex-direction: column;
+  border-radius: 16px;
 }
 
-/* Modal Mode */
-.player-overlay.is-modal .player-container-new {
-  width: 90vw;
-  max-width: 1200px;
-  aspect-ratio: 16/9.5;
-  border-radius: 12px;
+.player-overlay.is-modal .player-shell {
+  width: min(92vw, 1360px);
+  height: min(82vh, 780px);
 }
 
-/* Fullscreen Mode */
-.player-overlay.is-fullscreen .player-container-new {
+.player-overlay.is-fullscreen .player-shell {
   width: 100vw;
   height: 100vh;
   border: none;
   border-radius: 0;
 }
 
-.player-header-bar {
+/* Top Bar */
+.player-top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.25rem;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent);
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0 1rem;
+  height: 48px;
+  background: rgba(8, 8, 12, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  gap: 1rem;
 }
 
-.player-container-new:hover .player-header-bar {
-  opacity: 1;
-}
-
-.player-title-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #fff;
-  opacity: 0.9;
-  letter-spacing: -0.01em;
-}
-
-.player-episode-info {
-  margin-left: 0.5rem;
-  color: var(--text-secondary);
-  font-weight: 400;
-}
-
-.player-controls-set {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.player-icon-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+.player-title-section {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
-}
-
-.player-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
-}
-
-.player-icon-btn.active {
-  background: rgba(94, 106, 210, 0.4);
-  color: var(--accent);
-  box-shadow: 0 0 15px rgba(94, 106, 210, 0.2);
-}
-
-.player-icon-btn.close-btn:hover {
-  background: rgba(239, 68, 68, 0.4);
-  color: #fff;
-}
-
-.player-layout-split {
-  display: flex;
-  flex: 1;
-  width: 100%;
-  height: 100%;
+  gap: 0.5rem;
+  min-width: 0;
   overflow: hidden;
 }
 
-.player-content-wrapper {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
+.player-title-icon {
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
-.player-iframe-new {
+.player-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e4e4e7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.player-episode-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(94, 106, 210, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.player-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Server Switcher */
+.server-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.server-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.server-chip:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.server-chip.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(94, 106, 210, 0.35);
+}
+
+.server-chip-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Player Buttons */
+.player-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.player-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.player-btn.active {
+  background: rgba(94, 106, 210, 0.25);
+  color: var(--accent);
+}
+
+.player-btn.close:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+/* Main Layout */
+.player-main-area {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.player-video-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.player-iframe {
+  flex: 1;
   width: 100%;
-  height: 100%;
   border: none;
   background: #000;
   display: block;
 }
 
-/* Custom Episodes List Panel */
-.player-custom-episodes {
-  background: #050508;
-  border-left: 1px solid var(--border-strong);
+/* Bottom Navigation for TV */
+.player-bottom-nav {
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding-top: 3.5rem;
-  /* Better alignment for floating header */
-  overflow: hidden;
-  /* Added to handle sliding well */
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  height: 42px;
+  background: rgba(8, 8, 12, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.nav-ep-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.nav-ep-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nav-ep-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* Season Dropdown */
+.nav-season-selector {
+  position: relative;
+}
+
+.season-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.season-dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.season-dropdown-trigger svg {
+  transition: transform 0.2s;
+}
+
+.season-dropdown-trigger svg.rotated {
+  transform: rotate(180deg);
+}
+
+.season-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: rgba(12, 12, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 6px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+}
+
+.season-dropdown::-webkit-scrollbar { width: 4px; }
+.season-dropdown::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+
+.season-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  font-family: inherit;
+}
+
+.season-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.season-option.active {
+  background: rgba(94, 106, 210, 0.15);
+  color: var(--accent);
+}
+
+.season-opt-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
-.episodes-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+.season-option.active .season-opt-num {
+  background: var(--accent);
+  color: #fff;
 }
 
-.episodes-header h3 {
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-secondary);
-}
-
-.episodes-count {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-.episodes-list-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0.5rem;
+.season-opt-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-}
-
-/* Use the premium scrollbar for this specifically */
-.episodes-list-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.episodes-list-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.episode-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.1, 0, 0, 1);
-}
-
-.episode-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.episode-item.active {
-  background: rgba(94, 106, 210, 0.12);
-  color: var(--accent);
-}
-
-.episode-number {
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  width: 1.5rem;
-  opacity: 0.5;
-}
-
-.episode-item.active .episode-number {
-  color: var(--accent);
-  opacity: 1;
-}
-
-.episode-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  gap: 1px;
   min-width: 0;
 }
 
-.episode-name {
-  font-size: 0.85rem;
+.season-opt-name {
+  font-size: 0.78rem;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.episode-runtime {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  opacity: 0.5;
+.season-opt-count {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Sidebar */
+.player-sidebar {
+  width: 340px;
+  background: #060609;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.sidebar-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sidebar-header h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar-count {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-season-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.sidebar-season-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-season-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.sidebar-season-btn:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.sidebar-season-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 70px;
+  text-align: center;
+}
+
+.sidebar-episode-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-episode-list::-webkit-scrollbar { width: 4px; }
+.sidebar-episode-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+.sidebar-ep-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+
+.sidebar-ep-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-ep-item.active {
+  background: rgba(94, 106, 210, 0.1);
+  color: #fff;
+}
+
+.sidebar-ep-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.sidebar-ep-item.active .sidebar-ep-num {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sidebar-ep-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sidebar-ep-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-ep-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.sidebar-skeleton {
+  height: 42px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
 }
 
 @media (max-width: 1024px) {
-  .player-custom-episodes {
+  .player-sidebar {
     display: none;
-    /* Hide episodes on small screens or switch to bottom mode if needed */
   }
 }
 
 @media (max-width: 768px) {
-  .player-overlay.is-modal .player-container-new {
-    width: 95vw;
-    aspect-ratio: 16/9;
+  .player-overlay.is-modal .player-shell {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+  }
+  .player-top-bar {
+    padding: 0 0.75rem;
+  }
+  .server-switcher {
+    display: none;
   }
 }
 
@@ -1114,48 +1391,7 @@ body {
   }
 }
 
-/* ── Server Selector ── */
-.server-selector {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-}
 
-.server-btn {
-  background: transparent;
-  border: none;
-  padding: 4px 12px;
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  white-space: nowrap;
-}
-
-.server-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.server-btn.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(94, 106, 210, 0.3);
-}
-
-@media (max-width: 640px) {
-  .server-selector {
-    display: none;
-    /* Optional: hide on very small screens to save space, 
-       or keep it if it fits. */
-  }
-}
 
 /* ── Modern Landing Page Architectural Styles ── */
 .modern-landing-page {
