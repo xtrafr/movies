@@ -38,7 +38,7 @@ function Search() {
   // Handle Scroll for Back to Top
   useEffect(() => {
     const handleScroll = () => setShowBackToTop(window.scrollY > 1000);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Film, Server } from 'lucide-react';
 
@@ -10,7 +10,6 @@ const SERVERS = [
 ];
 
 const PlayerOverlay = ({ item, onClose }) => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeServer, setActiveServer] = useState('vidcore');
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeason] = useState(1);
@@ -18,6 +17,10 @@ const PlayerOverlay = ({ item, onClose }) => {
   const [currentEpisode, setCurrentEpisode] = useState(1);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
+  const seasonRef = useRef(null);
+  const episodeRef = useRef(null);
 
   const id = item?.id;
   const type = item?.media_type || 'movie';
@@ -77,23 +80,38 @@ const PlayerOverlay = ({ item, onClose }) => {
     return `${server.baseUrl}/tv/${id}/${activeSeason}/${currentEpisode}?autoPlay=true`;
   }, [activeServer, id, type, activeSeason, currentEpisode]);
 
+  useEffect(() => {
+    setIframeLoaded(false);
+  }, [embedUrl]);
+
   const handleKey = useCallback((e) => {
-    if (e.key === 'Escape') {
-      if (isFullscreen) setIsFullscreen(false);
-      else onClose();
-    }
-  }, [onClose, isFullscreen]);
+    if (e.key === 'Escape') onClose();
+  }, [onClose]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
 
+  useEffect(() => {
+    if (!showSeasonDropdown && !showEpisodeDropdown) return;
+    const handleClickOutside = (e) => {
+      if (seasonRef.current && !seasonRef.current.contains(e.target)) {
+        setShowSeasonDropdown(false);
+      }
+      if (episodeRef.current && !episodeRef.current.contains(e.target)) {
+        setShowEpisodeDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSeasonDropdown, showEpisodeDropdown]);
+
   if (!item) return null;
 
   return (
     <motion.div
-      className={`player-overlay ${isFullscreen ? 'is-fullscreen' : 'is-modal'}`}
+      className="player-overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -139,18 +157,23 @@ const PlayerOverlay = ({ item, onClose }) => {
 
         <div className="player-main-area">
           <div className="player-video-area">
+            {!iframeLoaded && (
+              <div className="iframe-loading">
+                <div className="iframe-spinner" />
+              </div>
+            )}
             <iframe
               src={embedUrl}
               className="player-iframe"
               allowFullScreen
-
               title="Video Player"
               key={`${activeServer}-${activeSeason}-${currentEpisode}`}
+              onLoad={() => setIframeLoaded(true)}
             />
 
             {type === 'tv' && (
               <div className="player-bottom-nav">
-                <div className="nav-season-selector">
+                <div className="nav-season-selector" ref={seasonRef}>
                   <button
                     className="season-dropdown-trigger"
                     onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
@@ -188,7 +211,7 @@ const PlayerOverlay = ({ item, onClose }) => {
                   </AnimatePresence>
                 </div>
 
-                <div className="nav-season-selector">
+                <div className="nav-season-selector" ref={episodeRef}>
                   <button
                     className="season-dropdown-trigger"
                     onClick={() => { setShowEpisodeDropdown(!showEpisodeDropdown); setShowSeasonDropdown(false); }}

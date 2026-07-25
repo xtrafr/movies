@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Search as SearchIcon, Server } from 'lucide-react';
 import VariableProximityText from '../components/VariableProximityText';
+import DotGrid from '../components/DotGrid';
 import '../App.css';
 
 const Landing = () => {
@@ -23,6 +24,7 @@ const Landing = () => {
 
   return (
     <div className="landing-page">
+      <DotGrid />
       <div className="glow-bg" />
 
       <nav className="landing-nav glass">

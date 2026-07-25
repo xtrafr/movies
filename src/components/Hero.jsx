@@ -7,6 +7,7 @@ const Hero = ({ onSearch, isLoading }) => {
 
   // Debounce search
   useEffect(() => {
+    if (!query.trim()) return;
     const timer = setTimeout(() => {
       onSearch(query);
     }, 400);
