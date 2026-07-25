@@ -836,7 +836,7 @@ body {
   border-radius: 16px;
 }
 
-.player-overlay.is-modal .player-shell {
+.player-shell {
   width: min(92vw, 1360px);
   height: min(82vh, 780px);
 }
@@ -1303,7 +1303,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .player-overlay.is-modal .player-shell {
+  .player-shell {
     width: 100vw;
     height: 100vh;
     border-radius: 0;
