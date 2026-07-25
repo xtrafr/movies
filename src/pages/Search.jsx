@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, Loader2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import MovieCard from '../components/MovieCard';
@@ -35,7 +35,6 @@ function Search() {
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
 
-  // Handle Scroll for Back to Top
   useEffect(() => {
     const handleScroll = () => setShowBackToTop(window.scrollY > 1000);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -44,9 +43,7 @@ function Search() {
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  // Unified Fetch Effect
   useEffect(() => {
-    // Cancel any previous pending request
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
@@ -54,7 +51,6 @@ function Search() {
       setLoading(true);
       setError(null);
 
-      // If it's page 1, we replace results. If > 1, we append.
       const isAppend = page > 1;
 
       try {
@@ -87,7 +83,7 @@ function Search() {
         setHasMore(data.page < data.total_pages);
       } catch (err) {
         if (err.name !== 'AbortError') {
-          setError("Could not load stories at this moment.");
+          setError("Could not load content at this moment.");
         }
       } finally {
         setLoading(false);
@@ -101,25 +97,25 @@ function Search() {
     };
   }, [filter, searchQuery, page]);
 
-  // Scroll lock
   useEffect(() => {
     document.body.style.overflow = selectedMedia ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
   }, [selectedMedia]);
 
-  const handleSearch = (query) => {
-    if (query === searchQuery) return;
+  const handleSearch = useCallback((query) => {
     setSearchQuery(query);
     setPage(1);
-    // Note: We don't clear results here to avoid the "flash"
-  };
+  }, []);
 
-  const handleFilterChange = (f) => {
-    if (f === filter) return;
+  const handleFilterChange = useCallback((f) => {
     setFilter(f);
     setPage(1);
-    setResults([]); // Clear results for filter change to feel snappy
-  };
+    setResults([]);
+  }, []);
+
+  const handleCardClick = useCallback((item) => {
+    setSelectedMedia(item);
+  }, []);
 
   return (
     <div className="search-page">
@@ -129,7 +125,12 @@ function Search() {
       <main className="app-container">
         <Hero onSearch={handleSearch} isLoading={loading} />
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-message">
+            <span>{error}</span>
+            <button className="error-retry" onClick={() => setPage(p => p)}>Try again</button>
+          </div>
+        )}
 
         <section className="results-section">
           <div className="results-grid">
@@ -137,7 +138,7 @@ function Search() {
               <MovieCard
                 key={`${item.id}-${item.media_type}-${index}`}
                 item={item}
-                onClick={() => setSelectedMedia(item)}
+                onClick={() => handleCardClick(item)}
               />
             ))}
           </div>
@@ -152,12 +153,20 @@ function Search() {
             </div>
           )}
 
-          {!loading && results.length === 0 && searchQuery && (
-            <p className="no-results">No results found matching your search.</p>
+          {loading && results.length > 0 && (
+            <div className="pagination-loader">
+              <Loader2 className="pagination-spinner" size={20} />
+            </div>
           )}
 
-          {!loading && results.length === 0 && !searchQuery && (
-            <p className="no-results">Loading suggestions...</p>
+          {!loading && results.length === 0 && searchQuery && (
+            <div className="empty-state">
+              <p className="no-results">No results found matching your search.</p>
+            </div>
+          )}
+
+          {!hasMore && results.length > 0 && (
+            <p className="end-of-results">You've reached the end</p>
           )}
         </section>
       </main>

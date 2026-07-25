@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Play } from 'lucide-react';
 
-const MovieCard = ({ item, onClick }) => {
+const MovieCard = memo(({ item, onClick }) => {
   const title = item.title || item.name;
   const rating = item.vote_average ? item.vote_average.toFixed(1) : '0.0';
   const year = (item.release_date || item.first_air_date || '').split('-')[0];
@@ -19,6 +19,9 @@ const MovieCard = ({ item, onClick }) => {
       transition={{ duration: 0.3 }}
       whileHover={{ y: -6, scale: 1.03 }}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
     >
       <div className="card-poster-wrapper">
         <img src={poster} alt={title} className="card-poster" loading="lazy" />
@@ -43,6 +46,8 @@ const MovieCard = ({ item, onClick }) => {
       </div>
     </motion.div>
   );
-};
+});
+
+MovieCard.displayName = 'MovieCard';
 
 export default MovieCard;

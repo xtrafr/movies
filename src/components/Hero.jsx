@@ -7,7 +7,6 @@ const Hero = ({ onSearch, isLoading }) => {
 
   // Debounce search
   useEffect(() => {
-    if (!query.trim()) return;
     const timer = setTimeout(() => {
       onSearch(query);
     }, 400);
@@ -26,7 +25,6 @@ const Hero = ({ onSearch, isLoading }) => {
         Cinema <span className="hero-accent">Discovery</span>.
       </motion.h1>
 
-
       <motion.div
         className="search-box-container"
         initial={{ y: 20, opacity: 0 }}
@@ -35,16 +33,17 @@ const Hero = ({ onSearch, isLoading }) => {
       >
         <div className="search-box glass">
           {isLoading ? (
-            <Loader2 className="animate-spin text-accent" size={20} />
+            <Loader2 className="search-spinner" size={20} />
           ) : (
-            <Search className="text-secondary" size={20} />
+            <Search className="search-icon" size={20} />
           )}
           <input
-            type="text"
+            type="search"
             placeholder="Search by movie, series..."
             className="search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search movies and TV shows"
           />
         </div>
       </motion.div>
