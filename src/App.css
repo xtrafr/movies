@@ -939,6 +939,47 @@ body {
   color: #ef4444;
 }
 
+/* Server Switcher */
+.server-switcher {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.server-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.server-chip:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.server-chip.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(94, 106, 210, 0.3);
+}
+
+.server-chip-num {
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 /* Main Layout */
 .player-main-area {
   display: flex;
@@ -1283,6 +1324,9 @@ body {
   }
   .player-top-bar {
     padding: 0 0.75rem;
+  }
+  .server-switcher {
+    display: none;
   }
 }
 

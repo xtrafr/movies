@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, Film } from 'lucide-react';
+import { X, ChevronDown, Film, Server } from 'lucide-react';
 
-const EMBED_BASE = 'https://www.vidking.net/embed';
+const SERVERS = [
+  { id: 'vidcore', label: 'VidCore', baseUrl: 'https://vidcore.org/embed' },
+  { id: 'vidphantom', label: 'VidPhantom', baseUrl: 'https://vidphantom.com' },
+  { id: 'vidking', label: 'VidKing', baseUrl: 'https://www.vidking.net/embed' },
+  { id: '2embed', label: '2Embed', baseUrl: 'https://www.2embed.stream/embed' },
+];
 
 const PlayerOverlay = ({ item, onClose }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeServer, setActiveServer] = useState('vidcore');
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeason] = useState(1);
   const [episodes, setEpisodes] = useState([]);
@@ -63,11 +69,13 @@ const PlayerOverlay = ({ item, onClose }) => {
   }, [id, type, activeSeason]);
 
   const embedUrl = useMemo(() => {
+    const server = SERVERS.find(s => s.id === activeServer);
+    if (!server) return '';
     if (type === 'movie') {
-      return `${EMBED_BASE}/movie/${id}?autoplay=true`;
+      return `${server.baseUrl}/movie/${id}?autoPlay=true`;
     }
-    return `${EMBED_BASE}/tv/${id}/${activeSeason}/${currentEpisode}?autoplay=true`;
-  }, [id, type, activeSeason, currentEpisode]);
+    return `${server.baseUrl}/tv/${id}/${activeSeason}/${currentEpisode}?autoPlay=true`;
+  }, [activeServer, id, type, activeSeason, currentEpisode]);
 
   const handleKey = useCallback((e) => {
     if (e.key === 'Escape') {
@@ -110,6 +118,19 @@ const PlayerOverlay = ({ item, onClose }) => {
           </div>
 
           <div className="player-controls-right">
+            <div className="server-switcher">
+              {SERVERS.map((server, i) => (
+                <button
+                  key={server.id}
+                  className={`server-chip ${activeServer === server.id ? 'active' : ''}`}
+                  onClick={() => setActiveServer(server.id)}
+                  title={server.label}
+                >
+                  <Server size={12} />
+                  <span className="server-chip-num">{i + 1}</span>
+                </button>
+              ))}
+            </div>
             <button className="player-btn close" onClick={onClose} title="Close">
               <X size={18} />
             </button>
@@ -124,7 +145,7 @@ const PlayerOverlay = ({ item, onClose }) => {
               allowFullScreen
 
               title="Video Player"
-              key={`${activeSeason}-${currentEpisode}`}
+              key={`${activeServer}-${activeSeason}-${currentEpisode}`}
             />
 
             {type === 'tv' && (
