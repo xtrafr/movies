@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, List, ChevronDown, ChevronRight, Film } from 'lucide-react';
+import { X, ChevronDown, Film } from 'lucide-react';
 
 const EMBED_BASE = 'https://www.vidking.net/embed';
 
 const PlayerOverlay = ({ item, onClose }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeason] = useState(1);
   const [episodes, setEpisodes] = useState([]);
   const [currentEpisode, setCurrentEpisode] = useState(1);
-  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
 
@@ -47,7 +45,6 @@ const PlayerOverlay = ({ item, onClose }) => {
     if (type !== 'tv' || !id) return;
     let cancelled = false;
     const fetchEpisodes = async () => {
-      setLoadingEpisodes(true);
       try {
         const res = await fetch(
           `https://api.themoviedb.org/3/tv/${id}/season/${activeSeason}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`
@@ -59,8 +56,6 @@ const PlayerOverlay = ({ item, onClose }) => {
         }
       } catch (err) {
         console.error('Failed to fetch episodes', err);
-      } finally {
-        if (!cancelled) setLoadingEpisodes(false);
       }
     };
     fetchEpisodes();
@@ -79,27 +74,12 @@ const PlayerOverlay = ({ item, onClose }) => {
       if (isFullscreen) setIsFullscreen(false);
       else onClose();
     }
-    if (e.key === 'c') setShowSidebar(prev => !prev);
   }, [onClose, isFullscreen]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
-
-  const goToNextSeason = () => {
-    const idx = seasons.findIndex(s => s.season_number === activeSeason);
-    if (idx < seasons.length - 1) {
-      setActiveSeason(seasons[idx + 1].season_number);
-    }
-  };
-
-  const goToPrevSeason = () => {
-    const idx = seasons.findIndex(s => s.season_number === activeSeason);
-    if (idx > 0) {
-      setActiveSeason(seasons[idx - 1].season_number);
-    }
-  };
 
   if (!item) return null;
 
@@ -114,7 +94,7 @@ const PlayerOverlay = ({ item, onClose }) => {
       <div className="player-background" onClick={onClose} />
 
       <motion.div
-        className={`player-shell ${showSidebar && type === 'tv' ? 'with-sidebar' : ''}`}
+        className="player-shell"
         layout
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       >
@@ -130,15 +110,6 @@ const PlayerOverlay = ({ item, onClose }) => {
           </div>
 
           <div className="player-controls-right">
-            {type === 'tv' && (
-              <button
-                className={`player-btn ${showSidebar ? 'active' : ''}`}
-                onClick={() => setShowSidebar(!showSidebar)}
-                title="Episodes"
-              >
-                <List size={16} />
-              </button>
-            )}
             <button className="player-btn close" onClick={onClose} title="Close">
               <X size={18} />
             </button>
@@ -236,75 +207,6 @@ const PlayerOverlay = ({ item, onClose }) => {
               </div>
             )}
           </div>
-
-          <AnimatePresence>
-            {type === 'tv' && showSidebar && (
-              <motion.div
-                className="player-sidebar"
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 340, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-              >
-                <div className="sidebar-header">
-                  <div className="sidebar-header-top">
-                    <h3>Episodes</h3>
-                    <span className="sidebar-count">{episodes.length} episodes</span>
-                  </div>
-                  <div className="sidebar-season-nav">
-                    <button
-                      className="sidebar-season-btn"
-                      disabled={seasons.findIndex(s => s.season_number === activeSeason) === 0}
-                      onClick={goToPrevSeason}
-                    >
-                      <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} />
-                    </button>
-                    <span className="sidebar-season-label">Season {activeSeason}</span>
-                    <button
-                      className="sidebar-season-btn"
-                      disabled={seasons.findIndex(s => s.season_number === activeSeason) === seasons.length - 1}
-                      onClick={goToNextSeason}
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div className="sidebar-episode-list">
-                  {loadingEpisodes ? (
-                    <div className="sidebar-loading">
-                      <div className="sidebar-skeleton" />
-                      <div className="sidebar-skeleton" />
-                      <div className="sidebar-skeleton" />
-                      <div className="sidebar-skeleton" />
-                    </div>
-                  ) : (
-                    episodes.map((ep) => (
-                      <button
-                        key={ep.id}
-                        className={`sidebar-ep-item ${currentEpisode === ep.episode_number ? 'active' : ''}`}
-                        onClick={() => setCurrentEpisode(ep.episode_number)}
-                      >
-                        <div className="sidebar-ep-num">
-                          {currentEpisode === ep.episode_number ? (
-                            <Play size={10} fill="currentColor" />
-                          ) : (
-                            <span>{ep.episode_number}</span>
-                          )}
-                        </div>
-                        <div className="sidebar-ep-info">
-                          <span className="sidebar-ep-name">{ep.name}</span>
-                          <div className="sidebar-ep-meta">
-                            {ep.air_date && <span>{ep.air_date.split('-')[0]}</span>}
-                            {ep.runtime ? <span>{ep.runtime}m</span> : null}
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </motion.div>
     </motion.div>
