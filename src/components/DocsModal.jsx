@@ -80,7 +80,7 @@ const DocsModal = ({ isOpen, onClose }) => {
                     Open source under the MIT license. Contributions welcome.
                   </p>
                   <a
-                    href="https://github.com"
+                    href="https://github.com/xtrafr/movies"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="docs-link"
@@ -115,7 +115,7 @@ const DocsModal = ({ isOpen, onClose }) => {
                 <div className="docs-code-block">
                   <code>
                     <span className="docs-code-comment"># Clone and install</span>{'\n'}
-                    git clone https://github.com/your-repo/moviefy.git{'\n'}
+                    git clone https://github.com/xtrafr/movies.git{'\n'}
                     cd moviefy && npm install{'\n\n'}
                     <span className="docs-code-comment"># Add your TMDB API key</span>{'\n'}
                     echo "VITE_TMDB_API_KEY=your_key" &gt; .env{'\n\n'}
