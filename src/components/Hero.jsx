@@ -12,7 +12,7 @@ const Hero = ({ onSearch, isLoading }) => {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, onSearch]);
 
   return (
     <section className="hero">

@@ -1,0 +1,57 @@
+:root {
+  --bg: #010103;
+  --border-strong: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Global Premium Scrollbar ── */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent !important;
+}
+
+::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 100px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24) !important;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glow-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at 50% 0%, var(--accent-glow) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glass {
+  background: rgba(10, 12, 30, 0.35);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border);
+}

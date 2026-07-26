@@ -1,14 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronUp, Loader2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import MovieCard from '../components/MovieCard';
 import PlayerOverlay from '../components/PlayerOverlay';
+import { fetchTrending, searchMulti } from '../api/tmdb';
 import '../App.css';
-
-const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-const BASE_URL = 'https://api.themoviedb.org/3';
 
 function Search() {
   const [results, setResults] = useState([]);
@@ -54,20 +52,12 @@ function Search() {
       const isAppend = page > 1;
 
       try {
-        let endpoint = '';
+        let data;
         if (searchQuery) {
-          endpoint = `/search/multi?query=${encodeURIComponent(searchQuery)}&language=en-US&page=${page}`;
+          data = await searchMulti(searchQuery, page, { signal: abortControllerRef.current.signal });
         } else {
-          let path = '/trending/all/day';
-          if (filter === 'movie') path = '/trending/movie/day';
-          if (filter === 'tv') path = '/trending/tv/day';
-          endpoint = `${path}?language=en-US&page=${page}`;
+          data = await fetchTrending(filter, page, { signal: abortControllerRef.current.signal });
         }
-
-        const response = await fetch(`${BASE_URL}${endpoint}&api_key=${API_KEY}`, {
-          signal: abortControllerRef.current.signal
-        });
-        const data = await response.json();
 
         let filteredResults = data.results || [];
         if (searchQuery && filter !== 'all') {

@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, Film, Server } from 'lucide-react';
+import { fetchTVDetails, fetchSeasonEpisodes } from '../api/tmdb';
 
 const SERVERS = [
   { id: 'vidphantom', label: 'VidPhantom', baseUrl: 'https://vidphantom.com' },
   { id: 'vidcore', label: 'VidCore', baseUrl: 'https://vidcore.org/embed' },
   { id: 'vidking', label: 'VidKing', baseUrl: 'https://www.vidking.net/embed' },
   { id: '2embed', label: '2Embed', baseUrl: 'https://www.2embed.stream/embed' },
+  { id: 'vidzee', label: 'VidZee', baseUrl: 'https://player.vidzee.wtf/embed' },
 ];
 
 const PlayerOverlay = ({ item, onClose }) => {
-  const [activeServer, setActiveServer] = useState('vidcore');
+  const [activeServer, setActiveServer] = useState(() => {
+    return localStorage.getItem('player-server') || SERVERS[0].id;
+  });
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeason] = useState(1);
   const [episodes, setEpisodes] = useState([]);
@@ -18,6 +22,8 @@ const PlayerOverlay = ({ item, onClose }) => {
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [seasonsLoading, setSeasonsLoading] = useState(false);
+  const [episodesLoading, setEpisodesLoading] = useState(false);
 
   const seasonRef = useRef(null);
   const episodeRef = useRef(null);
@@ -29,12 +35,11 @@ const PlayerOverlay = ({ item, onClose }) => {
   useEffect(() => {
     if (type !== 'tv' || !id) return;
     let cancelled = false;
+    const controller = new AbortController();
     const fetchShow = async () => {
+      setSeasonsLoading(true);
       try {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`
-        );
-        const data = await res.json();
+        const data = await fetchTVDetails(id, { signal: controller.signal });
         if (!cancelled && data.seasons) {
           const filtered = data.seasons.filter(s => s.season_number > 0);
           setSeasons(filtered);
@@ -43,32 +48,35 @@ const PlayerOverlay = ({ item, onClose }) => {
           setCurrentEpisode(1);
         }
       } catch (err) {
-        console.error('Failed to fetch show details', err);
+        if (err.name !== 'AbortError') console.error('Failed to fetch show details', err);
+      } finally {
+        if (!cancelled) setSeasonsLoading(false);
       }
     };
     fetchShow();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [id, type]);
 
   useEffect(() => {
     if (type !== 'tv' || !id) return;
     let cancelled = false;
+    const controller = new AbortController();
     const fetchEpisodes = async () => {
+      setEpisodesLoading(true);
       try {
-        const res = await fetch(
-          `https://api.themoviedb.org/3/tv/${id}/season/${activeSeason}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`
-        );
-        const data = await res.json();
+        const data = await fetchSeasonEpisodes(id, activeSeason, { signal: controller.signal });
         if (!cancelled && data.episodes) {
           setEpisodes(data.episodes);
           setCurrentEpisode(1);
         }
       } catch (err) {
-        console.error('Failed to fetch episodes', err);
+        if (err.name !== 'AbortError') console.error('Failed to fetch episodes', err);
+      } finally {
+        if (!cancelled) setEpisodesLoading(false);
       }
     };
     fetchEpisodes();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [id, type, activeSeason]);
 
   const embedUrl = useMemo(() => {
@@ -81,7 +89,13 @@ const PlayerOverlay = ({ item, onClose }) => {
   }, [activeServer, id, type, activeSeason, currentEpisode]);
 
   useEffect(() => {
+    localStorage.setItem('player-server', activeServer);
+  }, [activeServer]);
+
+  useEffect(() => {
     setIframeLoaded(false);
+    const timeout = setTimeout(() => setIframeLoaded(true), 8000);
+    return () => clearTimeout(timeout);
   }, [embedUrl]);
 
   const handleKey = useCallback((e) => {
@@ -92,6 +106,13 @@ const PlayerOverlay = ({ item, onClose }) => {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
+
+  useEffect(() => {
+    const shell = document.querySelector('.player-shell');
+    if (!shell) return;
+    const focusable = shell.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length > 0) focusable[0].focus();
+  }, []);
 
   useEffect(() => {
     if (!showSeasonDropdown && !showEpisodeDropdown) return;
@@ -112,6 +133,9 @@ const PlayerOverlay = ({ item, onClose }) => {
   return (
     <motion.div
       className="player-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Now playing: ${title}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -165,7 +189,9 @@ const PlayerOverlay = ({ item, onClose }) => {
             <iframe
               src={embedUrl}
               className="player-iframe"
+              allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
+              referrerPolicy="no-referrer"
               title="Video Player"
               key={`${activeServer}-${activeSeason}-${currentEpisode}`}
               onLoad={() => setIframeLoaded(true)}
@@ -190,7 +216,11 @@ const PlayerOverlay = ({ item, onClose }) => {
                         exit={{ opacity: 0, y: 8, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
                       >
-                        {seasons.map(s => (
+                        {seasonsLoading ? (
+                          <div className="sidebar-loading">
+                            {[...Array(4)].map((_, i) => <div key={i} className="sidebar-skeleton" />)}
+                          </div>
+                        ) : seasons.map(s => (
                           <button
                             key={s.season_number}
                             className={`season-option ${activeSeason === s.season_number ? 'active' : ''}`}
@@ -228,7 +258,11 @@ const PlayerOverlay = ({ item, onClose }) => {
                         exit={{ opacity: 0, y: 8, scale: 0.96 }}
                         transition={{ duration: 0.15 }}
                       >
-                        {episodes.map(ep => (
+                        {episodesLoading ? (
+                          <div className="sidebar-loading">
+                            {[...Array(4)].map((_, i) => <div key={i} className="sidebar-skeleton" />)}
+                          </div>
+                        ) : episodes.map(ep => (
                           <button
                             key={ep.id}
                             className={`season-option ${currentEpisode === ep.episode_number ? 'active' : ''}`}

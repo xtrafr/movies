@@ -34,6 +34,7 @@ const DotGrid = ({
     let mouse = { x: -1000, y: -1000, moved: false };
     let shockwaves = [];
 
+    let resizeTimeout;
     const resize = () => {
       // High-DPI resolution scaling for crisp UI
       width = window.innerWidth;
@@ -47,6 +48,11 @@ const DotGrid = ({
       
       ctx.scale(dpr, dpr);
       initDots();
+    };
+
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(resize, 150);
     };
 
     const initDots = () => {
@@ -71,7 +77,7 @@ const DotGrid = ({
     };
 
     resize();
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', debouncedResize);
 
     const handleMouseMove = (e) => {
       mouse.x = e.clientX;
@@ -193,7 +199,8 @@ const DotGrid = ({
     animate();
 
     return () => {
-      window.removeEventListener('resize', resize);
+      clearTimeout(resizeTimeout);
+      window.removeEventListener('resize', debouncedResize);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('click', handleClick);

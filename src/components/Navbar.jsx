@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
+import DocsModal from './DocsModal';
 
 const Navbar = ({ currentFilter, setFilter }) => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,6 +18,7 @@ const Navbar = ({ currentFilter, setFilter }) => {
   }, []);
 
   return (
+    <>
     <motion.header
       className="navbar-wrapper"
       initial={{ y: -20, opacity: 0 }}
@@ -57,9 +61,19 @@ const Navbar = ({ currentFilter, setFilter }) => {
           >
             Explore
           </button>
+          <button
+            onClick={() => setShowDocs(true)}
+            className="nav-link docs-btn"
+            title="Documentation"
+          >
+            <BookOpen size={13} />
+            Docs
+          </button>
         </div>
       </nav>
     </motion.header>
+    <DocsModal isOpen={showDocs} onClose={() => setShowDocs(false)} />
+    </>
   );
 };
 

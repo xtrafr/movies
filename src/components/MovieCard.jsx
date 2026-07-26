@@ -21,6 +21,7 @@ const MovieCard = memo(({ item, onClick }) => {
       onClick={onClick}
       role="button"
       tabIndex={0}
+      aria-label={`Play ${title}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
     >
       <div className="card-poster-wrapper">
