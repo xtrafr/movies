@@ -14,7 +14,7 @@
   <a href="#screenshots">Screenshots</a> | <a href="#features">Features</a> | <a href="#quick-start">Quick start</a> | <a href="#deployment">Deployment</a>
 </p>
 
-MovieFY is a responsive React app for discovering TMDB titles, opening popup-restricted playback sources, and keeping a personal library. It works without an account, with optional Supabase sign-in for cross-device sync.
+MovieFY is a responsive React app for discovering TMDB titles, opening third-party playback sources, and keeping a personal library. It works without an account, with optional username accounts for cross-device sync.
 
 ## Screenshots
 
@@ -36,14 +36,15 @@ MovieFY is a responsive React app for discovering TMDB titles, opening popup-res
 - Sort by trending, popularity, rating, release date, or title
 - Switch into a focused results grid when any discovery filter is active
 - Open detailed title pages with cast, metadata, and recommendations
-- Four popup-restricted playback sources in a custom player shell
+- Five HD-focused playback sources in a custom player shell
 - Automatic provider health checks, error detection, and timeout fallback
-- Sandboxed embeds that block popup and top-window navigation
+- A clear uBlock Origin warning before the first third-party playback
 - Season and episode selectors for TV shows
 - Mandatory next episode when playback finishes, including season boundaries
 - Subtitle, adaptive quality, resume, and playback-event support through the selected player
 - My List, history, episodes, and progress stored locally by default
-- Optional email accounts with secure Supabase synchronization
+- Username and password accounts with secure Supabase synchronization
+- Downloadable one-time backup codes for password recovery
 - Lightweight Firefox rendering fallbacks for systems without hardware acceleration
 - Responsive layouts for desktop and phone screens
 - Privacy-friendly Umami analytics on `movies.xtra.wtf` only, never on localhost
@@ -66,11 +67,14 @@ Set your key in `.env`:
 TMDB_API_KEY=your_tmdb_api_key
 ```
 
-Account sync is optional. Connect a Supabase project through Vercel or add these local values:
+Account sync is optional. Connect a Supabase project through Vercel or add the public browser values and server-only Supabase credentials:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
 ```
 
 Apply the included secure schema once:
@@ -80,7 +84,7 @@ npm run db:migrate
 npm run db:verify
 ```
 
-For public email registration, configure a custom SMTP provider in Supabase under Authentication, Emails, SMTP Settings. Supabase's built-in sender is intended only for initial testing and has a very small shared email quota. Keep email confirmation enabled.
+MovieFY does not send confirmation or recovery emails. Registration uses a username and password, then shows eight downloadable backup codes once.
 
 Vite will print the local address, normally [http://localhost:5173](http://localhost:5173).
 
@@ -90,20 +94,21 @@ MovieFY does not host video files. It embeds independent providers that accept T
 
 | Source | Role |
 | --- | --- |
-| ScreenScape | Primary movie and episode player with captions and quality controls |
-| APIPlayer | Playback events, progress, subtitles, and auto-next support |
-| MoviesAPI | Alternate catalog source |
-| EmbedAPI | Multi-source fallback |
+| APIPlayer | HLS quality selection, subtitles, audio tracks, chapters, and full player events |
+| ScreenScape | Progress sync, subtitles, and alternate audio |
+| VidFast | Adaptive playback and a responsive player |
+| VidLink | High-quality streams, subtitle support, and full player events |
+| VidSrc | Multi-server playback and progress syncing |
 
 Every playback session starts on source 1. MovieFY checks that source through `/api/player-health` and advances only when the automatically selected source returns an error page or cannot be reached. A source selected manually is respected instead of being overridden by the preflight check. TV sources receive mandatory auto-next instructions, while completion events and near-end progress signals immediately move MovieFY to the next episode.
 
-All four sources run inside a browser sandbox without `allow-popups` or top-navigation permissions. Providers that require an unrestricted iframe are intentionally not included.
+These providers are third-party services and can show ads or open popup tabs. MovieFY displays a warning before the first playback and links directly to [uBlock Origin](https://ublockorigin.com/) for a cleaner experience.
 
 ## Account security
 
-Supabase Auth handles password hashing, verification, password resets, and sessions. MovieFY never stores plaintext passwords or password hashes.
+Supabase Auth handles password hashing, verification, and sessions. MovieFY never stores plaintext passwords or password hashes. Account recovery uses high-entropy one-time codes. Only salted SHA-256 hashes of those codes reach the database.
 
-The browser receives only the Supabase publishable key. Database passwords, secret keys, service-role keys, and connection strings remain server-only. Row Level Security restricts every library and preference query to the signed-in user's ID. Anonymous requests cannot read or write synchronized data.
+The browser receives only the Supabase publishable key. Database passwords, secret keys, service-role keys, and connection strings remain server-only. Registration, login, and recovery pass through a same-origin, rate-limited server endpoint. Row Level Security restricts every library, preference, and account query to the signed-in user's ID. Recovery-code hashes and rate-limit data have no client policies or grants.
 
 ## Tech stack
 
@@ -147,8 +152,7 @@ Update the website ID in `index.html` if you deploy your own copy. Update the pr
 2. Add `TMDB_API_KEY` to the project environment variables. Existing deployments using `VITE_TMDB_API_KEY` remain compatible, but the server-only name is recommended.
 3. Connect Supabase through the Vercel Marketplace if you want account sync.
 4. Apply `supabase/migrations/202608020001_user_library.sql` to the connected database.
-5. Configure custom SMTP in Supabase before opening registration to the public.
-6. Deploy.
+5. Deploy. Email or SMTP setup is not required.
 
 The included `vercel.json` provides SPA routing and the same-origin analytics proxy.
 
@@ -170,6 +174,7 @@ npm run preview
 npm run db:migrate
 npm run db:verify
 npm run auth:verify
+ALLOW_AUTH_TEST=true npm run account:verify
 ```
 
 ## Legal

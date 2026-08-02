@@ -9,7 +9,7 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Playback that recovers',
-    copy: 'MovieFY moves between popup-restricted sources when a player reports a failure or times out.',
+    copy: 'MovieFY moves between five playback sources when a player reports a failure or times out.',
   },
   {
     icon: Captions,

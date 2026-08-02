@@ -7,7 +7,6 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const [recoveryMode, setRecoveryMode] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -23,7 +22,6 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
-      if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
     });
 
     return () => {
@@ -32,25 +30,38 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const value = useMemo(() => ({
-    configured: isSupabaseConfigured,
-    loading,
-    session,
-    recoveryMode,
-    user: session?.user ?? null,
-    signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-    signUp: (email, password) => supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/search` },
-    }),
-    sendPasswordReset: (email) => supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/search`,
-    }),
-    updatePassword: (password) => supabase.auth.updateUser({ password }),
-    finishRecovery: () => setRecoveryMode(false),
-    signOut: () => supabase.auth.signOut(),
-  }), [loading, recoveryMode, session]);
+  const value = useMemo(() => {
+    const requestAccount = async (action, values) => {
+      try {
+        const response = await fetch('/api/account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, ...values }),
+        });
+        const data = await response.json();
+        if (!response.ok) return { data: null, error: { message: data.error, status: response.status } };
+        const { error } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        if (error) return { data: null, error };
+        return { data, error: null };
+      } catch {
+        return { data: null, error: { message: 'The account service could not be reached.' } };
+      }
+    };
+
+    return {
+      configured: isSupabaseConfigured,
+      loading,
+      session,
+      user: session?.user ?? null,
+      signIn: (username, password) => requestAccount('signin', { username, password }),
+      signUp: (username, password) => requestAccount('signup', { username, password }),
+      recoverAccount: (username, recoveryCode, newPassword) => requestAccount('recover', { username, recoveryCode, newPassword }),
+      signOut: () => supabase.auth.signOut(),
+    };
+  }, [loading, session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -12,7 +12,8 @@ const Navbar = ({ currentFilter, setFilter }) => {
   const [showDocs, setShowDocs] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
-  const { user, recoveryMode, signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const username = user?.user_metadata?.username || 'MovieFY user';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -100,7 +101,7 @@ const Navbar = ({ currentFilter, setFilter }) => {
               onClick={() => user ? setShowAccount((open) => !open) : setShowAuth(true)}
               aria-expanded={user ? showAccount : undefined}
               aria-label={user ? 'Open account menu' : 'Sign in'}
-              title={user ? user.email : 'Sign in to sync'}
+              title={user ? username : 'Sign in to sync'}
             >
               {user ? <Cloud size={14} /> : <UserRound size={14} />}
               <span>{user ? 'Synced' : 'Sign in'}</span>
@@ -108,7 +109,7 @@ const Navbar = ({ currentFilter, setFilter }) => {
             {user && showAccount ? (
               <div className="account-menu">
                 <span>Signed in as</span>
-                <strong>{user.email}</strong>
+                <strong>@{username}</strong>
                 <p><Cloud size={13} /> Your library syncs securely.</p>
                 <button type="button" onClick={async () => { setShowAccount(false); await signOut(); }}><LogOut size={14} /> Sign out</button>
               </div>
@@ -118,7 +119,7 @@ const Navbar = ({ currentFilter, setFilter }) => {
       </nav>
     </motion.header>
     <DocsModal isOpen={showDocs} onClose={() => setShowDocs(false)} />
-    <AuthModal open={showAuth || recoveryMode} onClose={() => setShowAuth(false)} />
+    <AuthModal open={showAuth} onClose={() => setShowAuth(false)} />
     </>
   );
 };

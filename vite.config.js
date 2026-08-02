@@ -1,7 +1,28 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { handleAccountRequest } from './server/accountAuth.js'
 import { checkPlayerSource } from './server/playerHealth.js'
 import { requestTmdb } from './server/tmdbProxy.js'
+
+const accountPlugin = (env) => ({
+  name: 'moviefy-account-api',
+  configureServer(server) {
+    server.middlewares.use('/api/account', async (request, response) => {
+      let body = ''
+      for await (const chunk of request) {
+        body += chunk
+        if (body.length > 8192) {
+          response.statusCode = 413
+          response.setHeader('Content-Type', 'application/json')
+          response.end(JSON.stringify({ error: 'Request is too large.' }))
+          return
+        }
+      }
+      request.body = body
+      await handleAccountRequest(request, response, env)
+    })
+  },
+})
 
 const playerHealthPlugin = () => ({
   name: 'moviefy-player-health',
@@ -56,7 +77,7 @@ export default defineConfig(({ mode }) => {
   const tmdbApiKey = env.TMDB_API_KEY || env.VITE_TMDB_API_KEY || ''
 
   return {
-    plugins: [react(), playerHealthPlugin(), tmdbProxyPlugin(tmdbApiKey)],
+    plugins: [react(), playerHealthPlugin(), tmdbProxyPlugin(tmdbApiKey), accountPlugin(env)],
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabasePublishableKey),

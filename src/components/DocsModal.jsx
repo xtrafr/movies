@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Server, Terminal, X } from 'lucide-react';
 
 const SERVERS = [
-  ['01', 'ScreenScape', 'Primary movie and episode player'],
-  ['02', 'APIPlayer', 'Progress events and auto-next'],
-  ['03', 'MoviesAPI', 'Alternate catalog source'],
-  ['04', 'EmbedAPI', 'Multi-source fallback'],
+  ['01', 'APIPlayer', 'Subtitles, HLS quality, audio tracks and events'],
+  ['02', 'ScreenScape', 'Progress sync, subtitles and alternate audio'],
+  ['03', 'VidFast', 'Adaptive playback and a responsive player'],
+  ['04', 'VidLink', 'High-quality streams, subtitles and progress events'],
+  ['05', 'VidSrc', 'Multi-server playback and progress syncing'],
 ];
 
 const DocsModal = ({ isOpen, onClose }) => {
@@ -43,7 +44,7 @@ const DocsModal = ({ isOpen, onClose }) => {
 
               <div className="docs-note">
                 <strong>How playback works</strong>
-                <p>MovieFY uses popup-restricted players, tracks playback progress, advances episodes, and quietly skips a failed source.</p>
+                <p>MovieFY uses five third-party players, tracks playback progress, advances episodes, and quietly skips a failed source.</p>
               </div>
             </aside>
 
@@ -61,7 +62,7 @@ const DocsModal = ({ isOpen, onClose }) => {
               <section className="docs-servers">
                 <div className="docs-section-heading">
                   <Server size={16} />
-                  <div><h3>Popup-restricted sources</h3><p>Select one manually or let MovieFY switch automatically.</p></div>
+                  <div><h3>Five playback sources</h3><p>Select one manually or let MovieFY switch automatically. We recommend uBlock Origin because providers can show ads or open popup tabs.</p></div>
                 </div>
                 <div className="docs-server-list">
                   {SERVERS.map(([number, name, note]) => (

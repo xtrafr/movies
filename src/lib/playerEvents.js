@@ -5,11 +5,13 @@ function finiteNumber(value) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function collectPayloads(data) {
+function collectPayloads(data, depth = 0, seen = new Set()) {
   if (!data || typeof data !== 'object') return [];
+  if (seen.has(data) || depth > 3) return [];
+  seen.add(data);
   const payloads = [data];
   for (const key of ['data', 'payload', 'detail', 'progress', 'state']) {
-    if (data[key] && typeof data[key] === 'object') payloads.push(data[key]);
+    if (data[key] && typeof data[key] === 'object') payloads.push(...collectPayloads(data[key], depth + 1, seen));
   }
   return payloads;
 }
@@ -43,7 +45,7 @@ export function normalizePlayerEvent(data) {
   if (!data || typeof data !== 'object') return null;
   if (data.type === 'PLAYER_NEXT_EPISODE') return { event: 'ended' };
 
-  const root = data.type === 'PLAYER_EVENT' && data.data && typeof data.data === 'object'
+  const root = (data.type === 'PLAYER_EVENT' || data.type === 'MEDIA_DATA') && data.data && typeof data.data === 'object'
     ? data.data
     : data;
   const payloads = collectPayloads(root);
@@ -51,7 +53,7 @@ export function normalizePlayerEvent(data) {
     .find((value) => typeof value === 'string' && !/^mplayer$/i.test(value));
   const event = normalizeEventName(eventCandidate);
   const currentTime = firstNumber(payloads, [
-    'currentTime', 'position', 'current', 'time', 'progressSeconds', 'watchedSeconds', 'seconds',
+    'currentTime', 'position', 'current', 'time', 'progressSeconds', 'watchedSeconds', 'watched', 'seconds',
   ]);
   const duration = firstNumber(payloads, ['duration', 'durationSeconds', 'totalDuration', 'length']);
   const percent = firstNumber(payloads, ['percent', 'percentage', 'progressPercent']);
@@ -73,6 +75,14 @@ export function shouldAdvanceEpisode(playerEvent) {
 
   const remaining = duration - currentTime;
   return currentTime / duration >= 0.985 && remaining <= 3;
+}
+
+export function shouldAdvanceEstimatedEpisode(currentTime, runtime, graceSeconds = 45) {
+  const position = finiteNumber(currentTime);
+  const estimatedRuntime = finiteNumber(runtime);
+  const grace = Math.max(0, finiteNumber(graceSeconds) ?? 45);
+  if (position === undefined || estimatedRuntime === undefined || estimatedRuntime <= 0) return false;
+  return position >= estimatedRuntime + grace;
 }
 
 export function getNextEpisodeSelection({ seasons = [], episodes = [], activeSeason, currentEpisode }) {

@@ -100,3 +100,127 @@ create policy "Users can delete their own preferences"
   for delete
   to authenticated
   using ((select auth.uid()) = user_id);
+
+create table if not exists public.user_accounts (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  username text not null,
+  username_normalized text not null unique,
+  created_at timestamptz not null default now(),
+  constraint user_accounts_username_length check (char_length(username) between 3 and 24),
+  constraint user_accounts_username_normalized check (
+    username_normalized = lower(username_normalized)
+    and username_normalized ~ '^[a-z0-9_]+$'
+  )
+);
+
+alter table public.user_accounts enable row level security;
+
+revoke all on table public.user_accounts from anon;
+revoke all on table public.user_accounts from authenticated;
+grant select on table public.user_accounts to authenticated;
+grant all on table public.user_accounts to service_role;
+
+drop policy if exists "Users can read their own account" on public.user_accounts;
+create policy "Users can read their own account"
+  on public.user_accounts
+  for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
+
+create table if not exists public.user_recovery_codes (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  code_salt text not null,
+  code_hash text not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, code_hash)
+);
+
+alter table public.user_recovery_codes enable row level security;
+
+revoke all on table public.user_recovery_codes from anon;
+revoke all on table public.user_recovery_codes from authenticated;
+grant all on table public.user_recovery_codes to service_role;
+
+create table if not exists public.auth_rate_limits (
+  rate_key text primary key,
+  window_started_at timestamptz not null,
+  attempts integer not null check (attempts > 0),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.auth_rate_limits enable row level security;
+
+revoke all on table public.auth_rate_limits from anon;
+revoke all on table public.auth_rate_limits from authenticated;
+grant all on table public.auth_rate_limits to service_role;
+
+create or replace function public.consume_auth_rate_limit(
+  p_key text,
+  p_limit integer,
+  p_window_seconds integer
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_attempts integer;
+begin
+  if p_key is null
+    or char_length(p_key) < 16
+    or char_length(p_key) > 180
+    or p_limit < 1
+    or p_limit > 1000
+    or p_window_seconds < 10
+    or p_window_seconds > 86400
+  then
+    return false;
+  end if;
+
+  insert into public.auth_rate_limits (rate_key, window_started_at, attempts, updated_at)
+  values (p_key, now(), 1, now())
+  on conflict (rate_key) do update
+  set
+    attempts = case
+      when public.auth_rate_limits.window_started_at <= now() - make_interval(secs => p_window_seconds)
+        then 1
+      else public.auth_rate_limits.attempts + 1
+    end,
+    window_started_at = case
+      when public.auth_rate_limits.window_started_at <= now() - make_interval(secs => p_window_seconds)
+        then now()
+      else public.auth_rate_limits.window_started_at
+    end,
+    updated_at = now()
+  returning attempts into current_attempts;
+
+  return current_attempts <= p_limit;
+end;
+$$;
+
+revoke all on function public.consume_auth_rate_limit(text, integer, integer) from public;
+revoke all on function public.consume_auth_rate_limit(text, integer, integer) from anon;
+revoke all on function public.consume_auth_rate_limit(text, integer, integer) from authenticated;
+grant execute on function public.consume_auth_rate_limit(text, integer, integer) to service_role;
+
+create or replace function public.consume_recovery_code(
+  p_user_id uuid,
+  p_code_hash text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  delete from public.user_recovery_codes
+  where user_id = p_user_id and code_hash = p_code_hash;
+  return found;
+end;
+$$;
+
+revoke all on function public.consume_recovery_code(uuid, text) from public;
+revoke all on function public.consume_recovery_code(uuid, text) from anon;
+revoke all on function public.consume_recovery_code(uuid, text) from authenticated;
+grant execute on function public.consume_recovery_code(uuid, text) to service_role;
