@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import './App.css';
+import './styles/polish.css';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Search = lazy(() => import('./pages/Search'));

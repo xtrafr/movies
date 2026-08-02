@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Copy, Download, KeyRound, Loader2, ShieldCheck, UserRound, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Download, Eye, EyeOff, KeyRound, Loader2, ShieldCheck, UserRound, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const copy = {
-  signin: { title: 'Welcome back', description: 'Use your username and password.', action: 'Sign in' },
-  signup: { title: 'Create account', description: 'No email or confirmation needed.', action: 'Create account' },
-  recover: { title: 'Recover account', description: 'Use one unused backup code to set a new password.', action: 'Change password' },
-  codes: { title: 'Save backup codes', description: 'Download these now. They are shown only once.' },
+  signin: { title: 'Sign in', description: 'Enter your account details.', action: 'Sign in' },
+  signup: { title: 'Create account', description: 'No email required.', action: 'Create account' },
+  recover: { title: 'Recover account', description: 'Use one backup code.', action: 'Change password' },
+  codes: { title: 'Save backup codes', description: 'Download now. Shown once.' },
 };
 
 function friendlyError(error) {
@@ -24,6 +24,7 @@ export default function AuthModal({ open, onClose }) {
   const [recoveryCodes, setRecoveryCodes] = useState([]);
   const [downloaded, setDownloaded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const canClose = mode !== 'codes';
@@ -36,6 +37,7 @@ export default function AuthModal({ open, onClose }) {
     setRecoveryCodes([]);
     setDownloaded(false);
     setCopied(false);
+    setShowPassword(false);
     setError('');
     onClose();
   }, [onClose]);
@@ -51,6 +53,7 @@ export default function AuthModal({ open, onClose }) {
     setMode(nextMode);
     setPassword('');
     setRecoveryCode('');
+    setShowPassword(false);
     setError('');
   };
 
@@ -114,52 +117,60 @@ export default function AuthModal({ open, onClose }) {
         <motion.div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <button type="button" className="auth-backdrop" onClick={canClose ? closeModal : undefined} aria-label="Close account dialog" />
           <motion.section className={`auth-modal ${mode === 'codes' ? 'auth-codes-modal' : ''}`} initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.985 }} transition={{ duration: 0.22 }}>
-            {canClose ? <button type="button" className="auth-close" onClick={closeModal} aria-label="Close"><X size={18} /></button> : null}
-            <span className="auth-eyebrow">MovieFY account</span>
-            <h2 id="auth-title">{currentCopy.title}</h2>
-            <p>{currentCopy.description}</p>
+            <div className="auth-main-panel">
+              {canClose ? <button type="button" className="auth-close" onClick={closeModal} aria-label="Close"><X size={18} /></button> : null}
+              <h2 id="auth-title">{currentCopy.title}</h2>
+              <p>{currentCopy.description}</p>
 
-            {mode === 'codes' ? (
-              <div className="auth-codes">
-                <div className="auth-code-grid" aria-label="Backup codes">
-                  {recoveryCodes.map((code) => <code key={code}>{code}</code>)}
+              {mode === 'signin' || mode === 'signup' ? (
+                <div className="auth-mode-tabs" role="tablist" aria-label="Account action">
+                  <button type="button" role="tab" aria-selected={mode === 'signin'} className={mode === 'signin' ? 'active' : ''} onClick={() => changeMode('signin')}>Sign in</button>
+                  <button type="button" role="tab" aria-selected={mode === 'signup'} className={mode === 'signup' ? 'active' : ''} onClick={() => changeMode('signup')}>Create account</button>
                 </div>
-                <div className="auth-code-actions">
-                  <button type="button" className="auth-secondary" onClick={copyCodes}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? 'Copied' : 'Copy'}</button>
-                  <button type="button" className="auth-submit" onClick={downloadCodes}><Download size={16} />Download codes</button>
+              ) : null}
+
+              {mode === 'recover' ? <button type="button" className="auth-recover-back" onClick={() => changeMode('signin')}><ArrowLeft size={14} /> Back to sign in</button> : null}
+
+              {mode === 'codes' ? (
+                <div className="auth-codes">
+                  <div className="auth-code-grid" aria-label="Backup codes">
+                    {recoveryCodes.map((code, index) => <code key={code}><span>{String(index + 1).padStart(2, '0')}</span>{code}</code>)}
+                  </div>
+                  <div className="auth-code-actions">
+                    <button type="button" className="auth-secondary" onClick={copyCodes}>{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? 'Copied' : 'Copy all'}</button>
+                    <button type="button" className="auth-submit" onClick={downloadCodes}><Download size={16} />Download codes</button>
+                  </div>
+                  <div className="auth-backup-note"><ShieldCheck size={16} /><span>Keep these private. They cannot be shown again.</span></div>
+                  <button type="button" className="auth-saved" disabled={!downloaded} onClick={closeModal}>{downloaded ? 'I saved my codes' : 'Download the codes to continue'}</button>
                 </div>
-                <div className="auth-backup-note"><ShieldCheck size={16} />MovieFY stores only protected hashes. These codes cannot be shown again.</div>
-                <button type="button" className="auth-saved" disabled={!downloaded} onClick={closeModal}>{downloaded ? 'I saved my codes' : 'Download the codes to continue'}</button>
-              </div>
-            ) : (
-              <>
-                <form className="auth-form" onSubmit={handleSubmit}>
-                  <label>
-                    <span>Username</span>
-                    <span className="auth-field"><UserRound size={15} /><input type="text" minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]+" autoCapitalize="none" autoCorrect="off" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required placeholder="your_username" /></span>
-                  </label>
-                  {mode === 'recover' ? <label>
-                    <span>Backup code</span>
-                    <span className="auth-field"><ShieldCheck size={15} /><input type="text" autoCapitalize="characters" autoComplete="off" value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} required placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" /></span>
-                  </label> : null}
-                  <label>
-                    <span>{mode === 'recover' ? 'New password' : 'Password'}</span>
-                    <span className="auth-field"><KeyRound size={15} /><input type="password" minLength={12} maxLength={128} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="12 characters or more" /></span>
-                  </label>
+              ) : (
+                <>
+                  <form className="auth-form" onSubmit={handleSubmit}>
+                    <label>
+                      <span>Username</span>
+                      <span className="auth-field"><UserRound size={16} /><input type="text" minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]+" autoCapitalize="none" autoCorrect="off" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required placeholder="your_username" /></span>
+                    </label>
+                    {mode === 'recover' ? <label>
+                      <span>Backup code</span>
+                      <span className="auth-field"><ShieldCheck size={16} /><input type="text" autoCapitalize="characters" autoComplete="off" value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} required placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" /></span>
+                    </label> : null}
+                    <label>
+                      <span>{mode === 'recover' ? 'New password' : 'Password'}</span>
+                      <span className="auth-field"><KeyRound size={16} /><input type={showPassword ? 'text' : 'password'} minLength={12} maxLength={128} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="12 characters or more" /><button type="button" className="auth-password-toggle" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span>
+                      {mode !== 'signin' ? <small className="auth-password-note">12 characters minimum.</small> : null}
+                    </label>
 
-                  {error ? <div className="auth-feedback error" role="alert">{error}</div> : null}
+                    {error ? <div className="auth-feedback error" role="alert">{error}</div> : null}
 
-                  <button type="submit" className="auth-submit" disabled={busy}>
-                    {busy ? <Loader2 className="auth-spinner" size={17} /> : null}{currentCopy.action}
-                  </button>
-                </form>
+                    <button type="submit" className="auth-submit" disabled={busy}>
+                      {busy ? <Loader2 className="auth-spinner" size={17} /> : null}{currentCopy.action}
+                    </button>
+                  </form>
 
-                <div className="auth-switches">
-                  {mode === 'signin' ? <><button type="button" onClick={() => changeMode('signup')}>Create account</button><button type="button" onClick={() => changeMode('recover')}>Use backup code</button></> : null}
-                  {mode !== 'signin' ? <button type="button" onClick={() => changeMode('signin')}>Back to sign in</button> : null}
-                </div>
-              </>
-            )}
+                  {mode === 'signin' ? <div className="auth-switches"><span>Lost your password?</span><button type="button" onClick={() => changeMode('recover')}>Use a backup code</button></div> : null}
+                </>
+              )}
+            </div>
           </motion.section>
         </motion.div>
       ) : null}
