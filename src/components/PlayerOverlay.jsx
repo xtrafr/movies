@@ -1,20 +1,34 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, Film, Server } from 'lucide-react';
-import { fetchTVDetails, fetchSeasonEpisodes } from '../api/tmdb';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, Film, Server, X } from 'lucide-react';
+import { fetchSeasonEpisodes, fetchTVDetails } from '../api/tmdb';
+import { buildPlayerUrl, PLAYER_SOURCES } from '../lib/playerSources';
 
-const SERVERS = [
-  { id: 'vidphantom', label: 'VidPhantom', baseUrl: 'https://vidphantom.com' },
-  { id: 'vidcore', label: 'VidCore', baseUrl: 'https://vidcore.org/embed' },
-  { id: 'vidking', label: 'VidKing', baseUrl: 'https://www.vidking.net/embed' },
-  { id: '2embed', label: '2Embed', baseUrl: 'https://www.2embed.stream/embed' },
-  { id: 'vidzee', label: 'VidZee', baseUrl: 'https://player.vidzee.wtf/embed' },
-];
+const TRUSTED_ORIGINS = new Set([
+  'https://vidphantom.com',
+  'https://vidcore.org',
+  'https://www.vidcore.org',
+  'https://www.vidking.net',
+  'https://vidking.net',
+  'https://www.2embed.stream',
+  'https://2embed.stream',
+  'https://player.vidzee.wtf',
+]);
+
+function containsPlayerError(data) {
+  try {
+    const value = typeof data === 'string' ? data : JSON.stringify(data);
+    return /error|failed|unavailable|not_found/i.test(value);
+  } catch {
+    return false;
+  }
+}
 
 const PlayerOverlay = ({ item, onClose }) => {
-  const [activeServer, setActiveServer] = useState(() => {
-    return localStorage.getItem('player-server') || SERVERS[0].id;
-  });
+  const id = item?.id;
+  const type = item?.media_type || 'movie';
+  const title = item?.title || item?.name || 'Untitled';
+  const [activeServer, setActiveServer] = useState(PLAYER_SOURCES[0].id);
   const [seasons, setSeasons] = useState([]);
   const [activeSeason, setActiveSeason] = useState(1);
   const [episodes, setEpisodes] = useState([]);
@@ -22,268 +36,264 @@ const PlayerOverlay = ({ item, onClose }) => {
   const [showSeasonDropdown, setShowSeasonDropdown] = useState(false);
   const [showEpisodeDropdown, setShowEpisodeDropdown] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [seasonsLoading, setSeasonsLoading] = useState(false);
-  const [episodesLoading, setEpisodesLoading] = useState(false);
-
+  const [seasonsLoading, setSeasonsLoading] = useState(type === 'tv');
+  const [episodesLoading, setEpisodesLoading] = useState(type === 'tv');
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
   const seasonRef = useRef(null);
   const episodeRef = useRef(null);
+  const failedServersRef = useRef(new Set());
+  const failoverTimerRef = useRef(null);
+  const selectionModeRef = useRef('automatic');
+  const playerShellRef = useRef(null);
+  const controlsTimerRef = useRef(null);
+  const activeServerInfo = PLAYER_SOURCES.find((source) => source.id === activeServer) || PLAYER_SOURCES[0];
 
-  const id = item?.id;
-  const type = item?.media_type || 'movie';
-  const title = item?.title || item?.name || 'Untitled';
-
-  useEffect(() => {
-    if (type !== 'tv' || !id) return;
-    let cancelled = false;
-    const controller = new AbortController();
-    const fetchShow = async () => {
-      setSeasonsLoading(true);
-      try {
-        const data = await fetchTVDetails(id, { signal: controller.signal });
-        if (!cancelled && data.seasons) {
-          const filtered = data.seasons.filter(s => s.season_number > 0);
-          setSeasons(filtered);
-          const firstSeason = filtered.length > 0 ? filtered[0].season_number : 1;
-          setActiveSeason(firstSeason);
-          setCurrentEpisode(1);
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') console.error('Failed to fetch show details', err);
-      } finally {
-        if (!cancelled) setSeasonsLoading(false);
-      }
-    };
-    fetchShow();
-    return () => { cancelled = true; controller.abort(); };
-  }, [id, type]);
-
-  useEffect(() => {
-    if (type !== 'tv' || !id) return;
-    let cancelled = false;
-    const controller = new AbortController();
-    const fetchEpisodes = async () => {
-      setEpisodesLoading(true);
-      try {
-        const data = await fetchSeasonEpisodes(id, activeSeason, { signal: controller.signal });
-        if (!cancelled && data.episodes) {
-          setEpisodes(data.episodes);
-          setCurrentEpisode(1);
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') console.error('Failed to fetch episodes', err);
-      } finally {
-        if (!cancelled) setEpisodesLoading(false);
-      }
-    };
-    fetchEpisodes();
-    return () => { cancelled = true; controller.abort(); };
-  }, [id, type, activeSeason]);
-
-  const embedUrl = useMemo(() => {
-    const server = SERVERS.find(s => s.id === activeServer);
-    if (!server) return '';
-    if (type === 'movie') {
-      return `${server.baseUrl}/movie/${id}?autoPlay=true`;
+  const showControls = useCallback(() => {
+    clearTimeout(controlsTimerRef.current);
+    setControlsVisible(true);
+    if (!showSeasonDropdown && !showEpisodeDropdown) {
+      controlsTimerRef.current = setTimeout(() => setControlsVisible(false), 2800);
     }
-    return `${server.baseUrl}/tv/${id}/${activeSeason}/${currentEpisode}?autoPlay=true`;
-  }, [activeServer, id, type, activeSeason, currentEpisode]);
+  }, [showEpisodeDropdown, showSeasonDropdown]);
 
-  useEffect(() => {
-    localStorage.setItem('player-server', activeServer);
+  const embedUrl = useMemo(() => buildPlayerUrl({
+    serverId: activeServer,
+    type,
+    id,
+    season: activeSeason,
+    episode: currentEpisode,
+  }), [activeSeason, activeServer, currentEpisode, id, type]);
+
+  const switchToNextServer = useCallback(() => {
+    selectionModeRef.current = 'automatic';
+    failedServersRef.current.add(activeServer);
+    const currentIndex = PLAYER_SOURCES.findIndex((source) => source.id === activeServer);
+    for (let offset = 1; offset <= PLAYER_SOURCES.length; offset += 1) {
+      const candidate = PLAYER_SOURCES[(currentIndex + offset) % PLAYER_SOURCES.length];
+      if (!failedServersRef.current.has(candidate.id)) {
+        setIframeLoaded(false);
+        setActiveServer(candidate.id);
+        return;
+      }
+    }
+    failedServersRef.current.clear();
+    setIframeLoaded(false);
+    setActiveServer(PLAYER_SOURCES[(currentIndex + 1) % PLAYER_SOURCES.length].id);
   }, [activeServer]);
 
   useEffect(() => {
-    setIframeLoaded(false);
-    const timeout = setTimeout(() => setIframeLoaded(true), 8000);
-    return () => clearTimeout(timeout);
-  }, [embedUrl]);
+    if (type !== 'tv' || !id) return undefined;
+    const controller = new AbortController();
+    fetchTVDetails(id, { signal: controller.signal })
+      .then((data) => {
+        const available = (data.seasons || []).filter((season) => season.season_number > 0);
+        setSeasons(available);
+        setActiveSeason(available[0]?.season_number || 1);
+        setCurrentEpisode(1);
+      })
+      .catch((error) => { if (error.name !== 'AbortError') console.error('Failed to load seasons', error); })
+      .finally(() => setSeasonsLoading(false));
+    return () => controller.abort();
+  }, [id, type]);
 
-  const handleKey = useCallback((e) => {
-    if (e.key === 'Escape') onClose();
+  useEffect(() => {
+    if (type !== 'tv' || !id) return undefined;
+    const controller = new AbortController();
+    fetchSeasonEpisodes(id, activeSeason, { signal: controller.signal })
+      .then((data) => {
+        setEpisodes(data.episodes || []);
+        setCurrentEpisode(1);
+      })
+      .catch((error) => { if (error.name !== 'AbortError') console.error('Failed to load episodes', error); })
+      .finally(() => setEpisodesLoading(false));
+    return () => controller.abort();
+  }, [activeSeason, id, type]);
+
+  useEffect(() => {
+    if (selectionModeRef.current === 'manual') return undefined;
+    const controller = new AbortController();
+    const query = new URLSearchParams({
+      server: activeServer,
+      type,
+      id: String(id),
+      season: String(activeSeason),
+      episode: String(currentEpisode),
+    });
+    fetch(`/api/player-health?${query}`, { signal: controller.signal })
+      .then((response) => response.json())
+      .then((result) => {
+        if (selectionModeRef.current === 'automatic' && !result.ok) switchToNextServer();
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [activeSeason, activeServer, currentEpisode, id, switchToNextServer, type]);
+
+  useEffect(() => {
+    failedServersRef.current.clear();
+  }, [activeSeason, currentEpisode, id]);
+
+  useEffect(() => {
+    clearTimeout(failoverTimerRef.current);
+    failoverTimerRef.current = setTimeout(switchToNextServer, 14000);
+    return () => clearTimeout(failoverTimerRef.current);
+  }, [activeServer, embedUrl, switchToNextServer]);
+
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (TRUSTED_ORIGINS.has(event.origin) && containsPlayerError(event.data)) switchToNextServer();
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [switchToNextServer]);
+
+  useEffect(() => {
+    const handleKey = (event) => { if (event.key === 'Escape') onClose(); };
+    const handleOutsideClick = (event) => {
+      if (seasonRef.current && !seasonRef.current.contains(event.target)) setShowSeasonDropdown(false);
+      if (episodeRef.current && !episodeRef.current.contains(event.target)) setShowEpisodeDropdown(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
   }, [onClose]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleKey]);
+    clearTimeout(controlsTimerRef.current);
+    if (!showSeasonDropdown && !showEpisodeDropdown) {
+      controlsTimerRef.current = setTimeout(() => setControlsVisible(false), 2800);
+    }
+    return () => clearTimeout(controlsTimerRef.current);
+  }, [showEpisodeDropdown, showSeasonDropdown]);
 
   useEffect(() => {
-    const shell = document.querySelector('.player-shell');
-    if (!shell) return;
-    const focusable = shell.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (focusable.length > 0) focusable[0].focus();
-  }, []);
-
-  useEffect(() => {
-    if (!showSeasonDropdown && !showEpisodeDropdown) return;
-    const handleClickOutside = (e) => {
-      if (seasonRef.current && !seasonRef.current.contains(e.target)) {
-        setShowSeasonDropdown(false);
-      }
-      if (episodeRef.current && !episodeRef.current.contains(e.target)) {
-        setShowEpisodeDropdown(false);
+    const handleFullscreenChange = () => {
+      const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement;
+      const playerFullscreen = Boolean(
+        fullscreenElement
+        && (fullscreenElement === playerShellRef.current || fullscreenElement.classList?.contains('player-iframe'))
+      );
+      setIsPlayerFullscreen(playerFullscreen);
+      if (playerFullscreen) {
+        clearTimeout(controlsTimerRef.current);
+        setControlsVisible(false);
+      } else {
+        showControls();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showSeasonDropdown, showEpisodeDropdown]);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, [showControls]);
 
   if (!item) return null;
 
   return (
-    <motion.div
-      className="player-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Now playing: ${title}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
+    <motion.div className="player-overlay" role="dialog" aria-modal="true" aria-label={`Now playing: ${title}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="player-background" onClick={onClose} />
-
       <motion.div
-        className="player-shell"
-        layout
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        ref={playerShellRef}
+        className={`player-shell ${controlsVisible && !isPlayerFullscreen ? 'controls-visible' : 'controls-hidden'} ${isPlayerFullscreen ? 'embedded-fullscreen' : ''}`}
+        initial={{ opacity: 0, scale: 0.985 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.985 }}
+        onPointerMove={showControls}
+        onTouchStart={showControls}
+        onFocusCapture={showControls}
       >
+        <div className="player-controls-reveal player-controls-reveal-top" onPointerEnter={showControls} aria-hidden="true" />
+        {type === 'tv' ? <div className="player-controls-reveal player-controls-reveal-bottom" onPointerEnter={showControls} aria-hidden="true" /> : null}
+
         <div className="player-top-bar">
           <div className="player-title-section">
             <Film size={14} className="player-title-icon" />
             <span className="player-title">{title}</span>
-            {type === 'tv' && (
-              <span className="player-episode-badge">
-                S{activeSeason} E{currentEpisode}
-              </span>
-            )}
+            {type === 'tv' ? <span className="player-episode-badge">S{activeSeason} E{currentEpisode}</span> : null}
           </div>
-
           <div className="player-controls-right">
-            <div className="server-switcher">
-              {SERVERS.map((server, i) => (
+            <div className="server-switcher" aria-label="Playback source">
+              {PLAYER_SOURCES.map((source, index) => (
                 <button
-                  key={server.id}
-                  className={`server-chip ${activeServer === server.id ? 'active' : ''}`}
-                  onClick={() => setActiveServer(server.id)}
-                  title={server.label}
+                  key={source.id}
+                  className={`server-chip ${activeServer === source.id ? 'active' : ''}`}
+                  onClick={() => {
+                    selectionModeRef.current = 'manual';
+                    failedServersRef.current.clear();
+                    setIframeLoaded(false);
+                    setActiveServer(source.id);
+                  }}
+                  title={`${source.label}: ${source.sandboxCompatible ? 'popup-restricted' : 'compatibility mode'}`}
+                  aria-label={`Use ${source.label}`}
                 >
-                  <Server size={12} />
-                  <span className="server-chip-num">{i + 1}</span>
+                  <Server size={12} /><span>{index + 1}</span>
                 </button>
               ))}
             </div>
-            <button className="player-btn close" onClick={onClose} title="Close">
-              <X size={18} />
-            </button>
+            <button className="player-btn close" onClick={onClose} title="Close" aria-label="Close player"><X size={18} /></button>
           </div>
         </div>
 
         <div className="player-main-area">
           <div className="player-video-area">
-            {!iframeLoaded && (
-              <div className="iframe-loading">
-                <div className="iframe-spinner" />
-              </div>
-            )}
+            {!iframeLoaded ? <div className="iframe-loading"><div className="iframe-spinner" /></div> : null}
             <iframe
               src={embedUrl}
               className="player-iframe"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock"
               allowFullScreen
+              sandbox={activeServerInfo.sandboxCompatible ? 'allow-scripts allow-same-origin allow-forms allow-presentation allow-modals allow-pointer-lock' : undefined}
               referrerPolicy="no-referrer"
-              title="Video Player"
+              title={`${title} video player`}
               key={`${activeServer}-${activeSeason}-${currentEpisode}`}
-              onLoad={() => setIframeLoaded(true)}
+              onLoad={() => { clearTimeout(failoverTimerRef.current); setIframeLoaded(true); }}
+              onError={switchToNextServer}
             />
 
-            {type === 'tv' && (
+            {type === 'tv' ? (
               <div className="player-bottom-nav">
                 <div className="nav-season-selector" ref={seasonRef}>
-                  <button
-                    className="season-dropdown-trigger"
-                    onClick={() => { setShowSeasonDropdown(!showSeasonDropdown); setShowEpisodeDropdown(false); }}
-                  >
-                    <span>Season {activeSeason}</span>
-                    <ChevronDown size={14} className={showSeasonDropdown ? 'rotated' : ''} />
+                  <button className="season-dropdown-trigger" onClick={() => { setShowSeasonDropdown((open) => !open); setShowEpisodeDropdown(false); }}>
+                    Season {activeSeason}<ChevronDown size={14} />
                   </button>
                   <AnimatePresence>
-                    {showSeasonDropdown && (
-                      <motion.div
-                        className="season-dropdown"
-                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        {seasonsLoading ? (
-                          <div className="sidebar-loading">
-                            {[...Array(4)].map((_, i) => <div key={i} className="sidebar-skeleton" />)}
-                          </div>
-                        ) : seasons.map(s => (
-                          <button
-                            key={s.season_number}
-                            className={`season-option ${activeSeason === s.season_number ? 'active' : ''}`}
-                            onClick={() => {
-                              setActiveSeason(s.season_number);
-                              setShowSeasonDropdown(false);
-                            }}
-                          >
-                            <span className="season-opt-num">{s.season_number}</span>
-                            <div className="season-opt-info">
-                              <span className="season-opt-name">{s.name}</span>
-                              <span className="season-opt-count">{s.episode_count} eps</span>
-                            </div>
+                    {showSeasonDropdown ? (
+                      <motion.div className="season-dropdown" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
+                        {seasonsLoading ? <div className="sidebar-loading"><div className="sidebar-skeleton" /><div className="sidebar-skeleton" /></div> : seasons.map((season) => (
+                          <button key={season.season_number} className={`season-option ${activeSeason === season.season_number ? 'active' : ''}`} onClick={() => { setEpisodesLoading(true); setIframeLoaded(false); setActiveSeason(season.season_number); setShowSeasonDropdown(false); }}>
+                            <span className="season-opt-num">{season.season_number}</span>
+                            <span className="season-opt-info"><span className="season-opt-name">{season.name}</span><span className="season-opt-count">{season.episode_count} episodes</span></span>
                           </button>
                         ))}
                       </motion.div>
-                    )}
+                    ) : null}
                   </AnimatePresence>
                 </div>
 
                 <div className="nav-season-selector" ref={episodeRef}>
-                  <button
-                    className="season-dropdown-trigger"
-                    onClick={() => { setShowEpisodeDropdown(!showEpisodeDropdown); setShowSeasonDropdown(false); }}
-                  >
-                    <span>Episode {currentEpisode}</span>
-                    <ChevronDown size={14} className={showEpisodeDropdown ? 'rotated' : ''} />
+                  <button className="season-dropdown-trigger" onClick={() => { setShowEpisodeDropdown((open) => !open); setShowSeasonDropdown(false); }}>
+                    Episode {currentEpisode}<ChevronDown size={14} />
                   </button>
                   <AnimatePresence>
-                    {showEpisodeDropdown && (
-                      <motion.div
-                        className="season-dropdown episode-dropdown"
-                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                        transition={{ duration: 0.15 }}
-                      >
-                        {episodesLoading ? (
-                          <div className="sidebar-loading">
-                            {[...Array(4)].map((_, i) => <div key={i} className="sidebar-skeleton" />)}
-                          </div>
-                        ) : episodes.map(ep => (
-                          <button
-                            key={ep.id}
-                            className={`season-option ${currentEpisode === ep.episode_number ? 'active' : ''}`}
-                            onClick={() => {
-                              setCurrentEpisode(ep.episode_number);
-                              setShowEpisodeDropdown(false);
-                            }}
-                          >
-                            <span className="season-opt-num">{ep.episode_number}</span>
-                            <div className="season-opt-info">
-                              <span className="season-opt-name">{ep.name}</span>
-                              {ep.runtime ? <span className="season-opt-count">{ep.runtime}m</span> : null}
-                            </div>
+                    {showEpisodeDropdown ? (
+                      <motion.div className="season-dropdown episode-dropdown" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}>
+                        {episodesLoading ? <div className="sidebar-loading"><div className="sidebar-skeleton" /><div className="sidebar-skeleton" /></div> : episodes.map((episode) => (
+                          <button key={episode.id} className={`season-option ${currentEpisode === episode.episode_number ? 'active' : ''}`} onClick={() => { setIframeLoaded(false); setCurrentEpisode(episode.episode_number); setShowEpisodeDropdown(false); }}>
+                            <span className="season-opt-num">{episode.episode_number}</span>
+                            <span className="season-opt-info"><span className="season-opt-name">{episode.name}</span><span className="season-opt-count">{episode.runtime ? `${episode.runtime} min` : 'Episode'}</span></span>
                           </button>
                         ))}
                       </motion.div>
-                    )}
+                    ) : null}
                   </AnimatePresence>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </motion.div>

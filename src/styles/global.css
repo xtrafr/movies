@@ -55,3 +55,34 @@ body {
   backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--border);
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Firefox without hardware acceleration pays heavily for live backdrop blur. */
+html[data-browser='firefox'] .glass,
+html[data-browser='firefox'] .navbar.rounded,
+html[data-browser='firefox'] .back-to-top,
+html[data-browser='firefox'] .card-play-icon,
+html[data-browser='firefox'] .card-badge {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

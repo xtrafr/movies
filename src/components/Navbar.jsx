@@ -45,29 +45,37 @@ const Navbar = ({ currentFilter, setFilter }) => {
         <div className="nav-links">
           <button
             onClick={() => setFilter('movie')}
+            data-umami-event="filter-media"
+            data-umami-event-type="movie"
             className={`nav-link ${currentFilter === 'movie' ? 'active' : ''}`}
           >
             Movies
           </button>
           <button
             onClick={() => setFilter('tv')}
+            data-umami-event="filter-media"
+            data-umami-event-type="tv"
             className={`nav-link ${currentFilter === 'tv' ? 'active' : ''}`}
           >
             TV Shows
           </button>
           <button
             onClick={() => setFilter('all')}
+            data-umami-event="filter-media"
+            data-umami-event-type="all"
             className={`nav-link ${currentFilter === 'all' ? 'active' : ''}`}
           >
             Explore
           </button>
           <button
             onClick={() => setShowDocs(true)}
+            data-umami-event="open-project-guide"
             className="nav-link docs-btn"
             title="Documentation"
+            aria-label="Open project guide"
           >
             <BookOpen size={13} />
-            Docs
+            <span className="docs-label">Docs</span>
           </button>
         </div>
       </nav>

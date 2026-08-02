@@ -533,3 +533,85 @@
   0%, 100% { background-position: 200% 0; }
   50% { background-position: -200% 0; }
 }
+
+/* Current landing direction */
+.landing-nav {
+  width: min(620px, calc(100vw - 2rem));
+  justify-content: space-between;
+  padding: 0.45rem 0.5rem 0.45rem 1rem;
+  box-sizing: border-box;
+}
+
+.landing-logo {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: 850 1rem/1 'Outfit', sans-serif;
+  letter-spacing: -0.045em;
+  cursor: pointer;
+}
+
+.landing-nav-actions { display: flex; align-items: center; gap: 0.25rem; }
+.landing-nav-actions a,
+.landing-nav-actions button {
+  min-height: 36px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.52);
+  font: 600 0.7rem 'Outfit', sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+.landing-nav-actions a:hover { color: #fff; }
+.landing-nav-actions button { background: #fff; color: #08080b; }
+
+.landing-hero { padding-top: 11rem; padding-bottom: 5rem; }
+.landing-proof { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.4rem; }
+.landing-proof span { padding: 0.3rem 0.6rem; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 999px; background: rgba(255, 255, 255, 0.025); color: rgba(255, 255, 255, 0.48); font-size: 0.63rem; font-weight: 650; }
+.modern-title { max-width: 1000px; margin: 0 auto 1.5rem; font-size: clamp(3.4rem, 7vw, 6.3rem); line-height: 0.98; letter-spacing: -0.06em; }
+.modern-subtitle { max-width: 670px; margin-bottom: 2.3rem; color: rgba(255, 255, 255, 0.55); font-size: 1rem; text-shadow: none; }
+.modern-btn { min-height: 46px; padding: 0.75rem 1.3rem; font-size: 0.82rem; }
+.stat-number { font-family: 'Outfit', sans-serif; font-style: normal; font-size: clamp(2.8rem, 5vw, 4.4rem); font-weight: 760; letter-spacing: -0.06em; }
+.landing-stats-container { margin: 10rem 0; }
+.landing-stats-inner { gap: clamp(2rem, 5vw, 5rem); }
+.landing-features-refined { max-width: 1100px; padding-bottom: 10rem; }
+.features-creative-header { max-width: 760px; margin: 0 auto 3rem; }
+.title-massive { margin-bottom: 1rem; font-size: clamp(3rem, 6vw, 5rem); line-height: 0.98; }
+.features-creative-header > p { max-width: 520px; margin: 0 auto; color: rgba(255, 255, 255, 0.44); font-size: 0.88rem; }
+.landing-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
+.landing-feature-card { padding: 1.4rem; border: 1px solid rgba(255, 255, 255, 0.075); border-radius: 18px; background: rgba(255, 255, 255, 0.025); text-align: left; }
+.landing-feature-card > span { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: rgba(99, 102, 241, 0.13); color: #a5b4fc; }
+.landing-feature-card h3 { margin: 1.1rem 0 0.45rem; font-size: 0.95rem; }
+.landing-feature-card p { margin: 0; color: rgba(255, 255, 255, 0.4); font-size: 0.76rem; line-height: 1.65; }
+.landing-final-cta { margin-top: 0.8rem; padding: 1.2rem 1.3rem; border: 1px solid rgba(255, 255, 255, 0.075); border-radius: 18px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: rgba(255, 255, 255, 0.025); }
+.landing-final-cta p { margin: 0; color: rgba(255, 255, 255, 0.45); font-size: 0.78rem; }
+
+@media (max-width: 768px) {
+  .landing-nav { top: 0.75rem; }
+  .landing-hero { padding: 7.5rem 1rem 3rem; }
+  .modern-title { font-size: clamp(2.7rem, 12vw, 4rem); }
+  .modern-subtitle { max-width: 520px; font-size: 0.88rem; line-height: 1.65; }
+  .modern-actions { flex-direction: column; align-items: stretch; max-width: 330px; margin-inline: auto; }
+  .modern-btn { width: 100%; }
+  .landing-stats-inner { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.4rem 1rem; }
+  .landing-stats-inner .stat-line { display: none; }
+  .landing-feature-grid { grid-template-columns: 1fr; }
+  .landing-final-cta { align-items: stretch; flex-direction: column; text-align: center; }
+}
+
+@media (max-width: 430px) {
+  .landing-nav-actions a { display: none; }
+  .landing-nav { width: calc(100vw - 1rem); }
+  .landing-proof { gap: 0.3rem; }
+  .landing-proof span { font-size: 0.57rem; }
+  .preview-container { height: 310px; }
+  .preview-mockup-frame { height: 340px; }
+  .mockup-body-ui { padding: 1rem; }
+  .landing-stats-container { margin: 5rem 0; }
+  .landing-features-refined { padding-inline: 1rem; }
+}

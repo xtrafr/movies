@@ -1,172 +1,143 @@
 <h1 align="center">MovieFY</h1>
 
 <p align="center">
-  <strong>A cinematic discovery and streaming experience.</strong>
+  A fast, personal place to discover movies, series, and anime.
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="#tech-stack">Tech Stack</a> ·
-  <a href="#project-structure">Structure</a> ·
-  <a href="#api-keys">API Keys</a> ·
-  <a href="#deployment">Deployment</a>
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React 19">
+  <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite" alt="Vite 8">
+  <img src="https://img.shields.io/badge/License-MIT-2ea44f?style=flat-square" alt="MIT license">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite" alt="Vite">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
+  <a href="#screenshots">Screenshots</a> | <a href="#features">Features</a> | <a href="#quick-start">Quick start</a> | <a href="#deployment">Deployment</a>
 </p>
 
----
+MovieFY is a responsive React app for searching and exploring TMDB titles, managing a device-local library, and opening third-party playback sources inside a custom player shell. No account is required.
 
-## What is this?
+## Screenshots
 
-MovieFY is a movie and TV show discovery app built with React. Search millions of titles powered by [The Movie Database (TMDB)](https://www.themoviedb.org/) API, browse trending content, and stream through multiple embedded video servers — all in a minimal, dark-themed UI with smooth animations.
+<p align="center">
+  <img src="public/screenshots/landing.png" alt="MovieFY landing page" width="100%">
+</p>
 
-It started as a weekend project and turned into something genuinely fun to use.
-
----
+<p align="center">
+  <img src="public/screenshots/catalog.png" alt="MovieFY discovery catalog" width="72%">
+  <img src="public/screenshots/mobile.png" alt="MovieFY mobile catalog" width="24%">
+</p>
 
 ## Features
 
-- **Search & Discovery** — Search across movies and TV shows with instant debounced results, or browse what's trending today
-- **Multi-Server Streaming** — Switch between 4 embedded video servers (VidPhantom, VidCore, VidKing, 2Embed) with one click
-- **TV Episode Navigation** — Season and episode dropdowns for navigating full TV series
-- **Infinite Scroll** — Automatically loads more results as you scroll
-- **Filter by Type** — Toggle between Movies, TV Shows, or explore everything
-- **Responsive Design** — Optimized layout for desktop and mobile devices
-- **Animated UI** — Smooth transitions powered by Framer Motion, including a proximity-based text weight effect on the landing page
-- **Keyboard Accessible** — Cards and interactive elements support keyboard navigation
+- Search movies, TV shows, and anime with TMDB metadata
+- Browse trending, popular, top-rated, and newly released titles
+- Filter by media type and genre with a custom sort menu
+- Five numbered playback sources in a simple custom player shell
+- Automatic provider health checks, error detection, and timeout fallback
+- Popup-restricted embeds on providers that support the browser sandbox
+- Season and episode selectors for TV shows
+- My List and watch history stored on the device
+- Lightweight Firefox rendering fallbacks for systems without hardware acceleration
+- Responsive layouts for desktop and phone screens
+- Privacy-friendly Umami page views, performance data, and selected UI events through a same-origin proxy
 
----
+## Quick start
 
-## Quick Start
-
-You'll need [Node.js](https://nodejs.org/) (v18+) and a [TMDB API key](#api-keys).
+You need Node.js 18 or newer and a free [TMDB API key](https://www.themoviedb.org/settings/api).
 
 ```bash
 git clone https://github.com/xtrafr/movies.git
 cd movies
 npm install
-```
-
-Create a `.env` file in the project root:
-
-```env
-VITE_TMDB_API_KEY=your_tmdb_api_key_here
-```
-
-Then run the dev server:
-
-```bash
+copy .env.example .env
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) and you're in.
+Set your key in `.env`:
 
----
+```env
+VITE_TMDB_API_KEY=your_tmdb_api_key
+```
 
-## Tech Stack
+Vite will print the local address, normally [http://localhost:5173](http://localhost:5173).
+
+## Playback
+
+MovieFY does not host video files. It embeds independent providers that accept TMDB IDs. Availability, subtitles, quality controls, and player events vary by provider and region.
+
+| Source | Role |
+| --- | --- |
+| VidPhantom | Primary source |
+| VidKing | Episode support |
+| 2Embed | Backup source |
+| VidZee | High-quality backup |
+| VidCore | Last fallback while the provider is unreliable |
+
+Every playback session starts on source 1. MovieFY checks that source through `/api/player-health` and advances in order only when the automatically selected source returns an error page or cannot be reached. A numbered source selected manually is respected instead of being overridden by the preflight check. Real iframe load errors and provider-reported playback failures can still trigger fallback.
+
+Sources 1 and 5 support a browser sandbox that blocks popups and top-window navigation. Sources 2, 3, and 4 explicitly reject any sandboxed iframe, so MovieFY loads those sources in compatibility mode. The web platform does not provide a separate permission that both hides the sandbox from the provider and blocks `window.open`.
+
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
-| Framework | [React 19](https://react.dev/) |
-| Build Tool | [Vite 8](https://vite.dev/) |
-| Styling | Plain CSS (CSS custom properties, glassmorphism) |
-| Animation | [Framer Motion](https://www.framer.com/motion/) |
-| Icons | [Lucide React](https://lucide.dev/) |
-| Routing | [React Router DOM 7](https://reactrouter.com/) |
-| Data Source | [TMDB API](https://developer.themoviedb.org/) |
-| Hosting | [Vercel](https://vercel.com/) |
+| --- | --- |
+| UI | React 19 and plain CSS |
+| Build | Vite 8 |
+| Routing | React Router 7 |
+| Motion | Framer Motion |
+| Icons | Lucide React |
+| Metadata | TMDB API |
+| Analytics | Self-hosted Umami through `/app-data` |
 
----
+## Project structure
 
-## Project Structure
-
-```
-movies/
-├── public/
-│   └── website.ico
-├── src/
-│   ├── components/
-│   │   ├── DotGrid.jsx          # Canvas dot animation background
-│   │   ├── Hero.jsx             # Search input with debounce
-│   │   ├── MovieCard.jsx        # Poster card with hover effects
-│   │   ├── Navbar.jsx           # Filter pill navbar (Movies/TV/Explore)
-│   │   ├── PlayerOverlay.jsx    # Video player with server switcher & episode nav
-│   │   └── VariableProximityText.jsx  # Proximity-based font weight animation
-│   ├── pages/
-│   │   ├── Landing.jsx          # Marketing landing page
-│   │   └── Search.jsx           # Core search & results page
-│   ├── App.jsx                  # Router setup
-│   ├── App.css                  # Component styles
-│   └── index.css                # Global styles & CSS variables
-├── index.html
-├── vite.config.js
-└── package.json
+```text
+src/
+  components/     cards, navigation, discovery controls, docs, player
+  hooks/          app state and browser-specific behavior
+  lib/            storage, playback, and utility modules
+  pages/          landing and discovery routes
+  styles/         global, landing, catalog, docs, and player styles
+public/
+  screenshots/    README previews
 ```
 
----
+## Analytics
 
-## API Keys
+The tracker loads from `/app-data/script.js` and sends data back through the same path. Development uses the Vite proxy and production uses the external rewrite in `vercel.json`. Keeping the tracker on the site's own origin follows Umami's recommended server-level proxy approach and makes simple hostname-based blocking less likely.
 
-This app uses [The Movie Database (TMDB) API](https://developer.themoviedb.org/) for all movie and TV show data, search, and metadata.
-
-You **need** a TMDB API key to run this project. Get one for free at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api).
-
-> The TMDB API is free for non-commercial use (up to 40 requests per 10 seconds).
-
-### Video Sources
-
-MovieFY does **not** host any video content. Playback is handled through third-party embed providers:
-
-| Server | URL | Notes |
-|--------|-----|-------|
-| **VidPhantom** | `vidphantom.com` | Default server |
-| **VidCore** | `vidcore.org` | |
-| **VidKing** | `vidking.net` | |
-| **2Embed** | `2embed.stream` | |
-
-All embed URLs accept TMDB IDs directly — no additional API keys are needed for the video sources.
-
-> **Note:** Video availability depends on the third-party embed services. These services are not affiliated with this project.
-
----
+Update the website ID in `index.html` if you deploy your own copy. Update the proxy destination in both `vite.config.js` and `vercel.json` if you use another Umami host.
 
 ## Deployment
 
-### Vercel (Recommended)
+### Vercel
 
-1. Push to GitHub
-2. Import the repository on [vercel.com](https://vercel.com)
-3. Add the environment variable:
-   - **Key:** `VITE_TMDB_API_KEY`
-   - **Value:** your TMDB API key
-4. Deploy
+1. Import the repository in Vercel.
+2. Add `VITE_TMDB_API_KEY` to the project environment variables.
+3. Deploy.
 
-The included `vercel.json` handles configuration automatically.
+The included `vercel.json` provides SPA routing and the same-origin analytics proxy.
 
-### Manual
+### Static hosting
 
 ```bash
 npm run build
 ```
 
-The `dist/` folder contains the production build. Serve it with any static file server.
+The production files are written to `dist/`. Hosts without server functions and platform rewrites need equivalents for the player health endpoint, SPA fallback, and `/app-data` proxy. A plain static host cannot provide those server-side checks and proxies by itself.
 
----
-
-## Development
+## Commands
 
 ```bash
-npm run dev      # Start dev server with HMR
-npm run build    # Production build
-npm run preview  # Preview production build locally
+npm run dev
+npm run lint
+npm run build
+npm run preview
 ```
 
----
+## Legal
+
+MovieFY is not affiliated with TMDB or any embedded playback provider. This product uses the TMDB API but is not endorsed or certified by TMDB. You are responsible for following the laws and provider terms that apply in your region.
 
 ## License
 
