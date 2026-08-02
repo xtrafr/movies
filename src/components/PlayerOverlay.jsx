@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Captions, ChevronDown, Film, Server, SkipForward, X } from 'lucide-react';
 import { fetchSeasonEpisodes, fetchTVDetails } from '../api/tmdb';
+import { getNextEpisodeSelection, normalizePlayerEvent, shouldAdvanceEpisode } from '../lib/playerEvents';
 import { buildPlayerUrl, PLAYER_SOURCES } from '../lib/playerSources';
 
 const TRUSTED_ORIGINS = new Set([
@@ -18,19 +19,6 @@ function containsPlayerError(data) {
   } catch {
     return false;
   }
-}
-
-function normalizePlayerEvent(data) {
-  if (data?.type === 'PLAYER_EVENT') return data.data || {};
-  if (data?.type === 'PLAYER_NEXT_EPISODE') return { event: 'next-episode' };
-  if (data?.type === 'mplayer' && data.event) {
-    return {
-      event: data.event,
-      currentTime: data.currentTime ?? data.position,
-      duration: data.duration,
-    };
-  }
-  return null;
 }
 
 export default function PlayerOverlay({ item, onClose, onProgress }) {
@@ -52,7 +40,6 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isPlayerFullscreen, setIsPlayerFullscreen] = useState(false);
   const [startAt, setStartAt] = useState(Math.max(0, Number(item?.watchedSeconds || 0)));
-  const [nextCountdown, setNextCountdown] = useState(null);
   const seasonRef = useRef(null);
   const episodeRef = useRef(null);
   const iframeRef = useRef(null);
@@ -65,7 +52,7 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
   const durationRef = useRef(Math.max(0, Number(item?.durationSeconds || 0)));
   const lastProgressReportRef = useRef(0);
   const requestedEpisodeRef = useRef(initialEpisode);
-  const autoNextDismissedRef = useRef(false);
+  const episodeAdvanceStartedRef = useRef(false);
   const watchStartedAtRef = useRef(null);
   const watchEventSentRef = useRef(false);
   const activeServerRef = useRef(activeServer);
@@ -109,12 +96,11 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
     subtitleLanguage: 'en',
   }), [activeSeason, activeServer, currentEpisode, id, startAt, type]);
 
-  const hasNextEpisode = useMemo(() => {
-    if (type !== 'tv') return false;
-    const currentIndex = episodes.findIndex((episode) => episode.episode_number === currentEpisode);
-    if (currentIndex >= 0 && currentIndex < episodes.length - 1) return true;
-    return seasons.some((season) => season.season_number > activeSeason);
+  const nextEpisodeSelection = useMemo(() => {
+    if (type !== 'tv') return null;
+    return getNextEpisodeSelection({ seasons, episodes, activeSeason, currentEpisode });
   }, [activeSeason, currentEpisode, episodes, seasons, type]);
+  const hasNextEpisode = Boolean(nextEpisodeSelection);
 
   const reportProgress = useCallback((force = false) => {
     if (!onProgress || durationRef.current <= 0) return;
@@ -132,30 +118,28 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
 
   const advanceEpisode = useCallback(() => {
     if (type !== 'tv') return;
-    setNextCountdown(null);
-    autoNextDismissedRef.current = false;
     currentTimeRef.current = 0;
     durationRef.current = 0;
     setStartAt(0);
     setIframeLoaded(false);
 
-    const currentIndex = episodes.findIndex((episode) => episode.episode_number === currentEpisode);
-    if (currentIndex >= 0 && currentIndex < episodes.length - 1) {
-      setCurrentEpisode(episodes[currentIndex + 1].episode_number);
+    if (!nextEpisodeSelection) return;
+    if (nextEpisodeSelection.season === activeSeason) {
+      setCurrentEpisode(nextEpisodeSelection.episode);
       return;
     }
 
-    const nextSeason = seasons.find((season) => season.season_number > activeSeason);
-    if (nextSeason) {
-      requestedEpisodeRef.current = 1;
-      setEpisodesLoading(true);
-      setActiveSeason(nextSeason.season_number);
-    }
-  }, [activeSeason, currentEpisode, episodes, seasons, type]);
+    requestedEpisodeRef.current = nextEpisodeSelection.episode;
+    setEpisodesLoading(true);
+    setActiveSeason(nextEpisodeSelection.season);
+  }, [activeSeason, nextEpisodeSelection, type]);
 
-  const beginAutoNext = useCallback(() => {
-    if (hasNextEpisode && !autoNextDismissedRef.current) setNextCountdown((current) => current ?? 10);
-  }, [hasNextEpisode]);
+  const autoAdvanceEpisode = useCallback(() => {
+    if (!hasNextEpisode || episodeAdvanceStartedRef.current) return;
+    episodeAdvanceStartedRef.current = true;
+    reportProgress(true);
+    advanceEpisode();
+  }, [advanceEpisode, hasNextEpisode, reportProgress]);
 
   const switchToNextServer = useCallback(() => {
     selectionModeRef.current = 'automatic';
@@ -227,7 +211,7 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
 
   useEffect(() => {
     failedServersRef.current.clear();
-    autoNextDismissedRef.current = false;
+    episodeAdvanceStartedRef.current = false;
   }, [activeSeason, currentEpisode, id]);
 
   useEffect(() => {
@@ -247,26 +231,35 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
         if (Number.isFinite(Number(playerEvent.currentTime))) currentTimeRef.current = Number(playerEvent.currentTime);
         if (Number.isFinite(Number(playerEvent.duration))) durationRef.current = Number(playerEvent.duration);
         if (playerEvent.event === 'timeupdate' || playerEvent.event === 'pause' || playerEvent.event === 'seeked') reportProgress(playerEvent.event !== 'timeupdate');
-        if (playerEvent.event === 'ended' || playerEvent.event === 'next-episode') {
-          reportProgress(true);
-          beginAutoNext();
-        }
+        if (shouldAdvanceEpisode({
+          ...playerEvent,
+          currentTime: playerEvent.currentTime ?? currentTimeRef.current,
+          duration: playerEvent.duration ?? durationRef.current,
+        })) autoAdvanceEpisode();
       }
       if (containsPlayerError(event.data)) switchToNextServer();
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [activeServer, beginAutoNext, reportProgress, startAt, switchToNextServer]);
+  }, [activeServer, autoAdvanceEpisode, reportProgress, startAt, switchToNextServer]);
 
   useEffect(() => {
-    if (nextCountdown === null) return undefined;
-    if (nextCountdown <= 0) {
-      const advanceTimer = setTimeout(advanceEpisode, 0);
-      return () => clearTimeout(advanceTimer);
-    }
-    const timer = setTimeout(() => setNextCountdown((current) => current - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [advanceEpisode, nextCountdown]);
+    if (type !== 'tv' || activeServer !== 'screenscape' || !iframeLoaded) return undefined;
+    const requestProgress = () => {
+      iframeRef.current?.contentWindow?.postMessage({
+        type: 'SCREENSCAPE_GET_PROGRESS',
+        requestId: `moviefy-${id}-${activeSeason}-${currentEpisode}`,
+        tmdb: id,
+        tmdbId: id,
+        mediaType: type,
+        season: activeSeason,
+        episode: currentEpisode,
+      }, 'https://flix.screenscape.me');
+    };
+    requestProgress();
+    const timer = setInterval(requestProgress, 4000);
+    return () => clearInterval(timer);
+  }, [activeSeason, activeServer, currentEpisode, id, iframeLoaded, type]);
 
   const handleClose = useCallback(() => {
     reportProgress(true);
@@ -349,15 +342,6 @@ export default function PlayerOverlay({ item, onClose, onProgress }) {
           <div className="player-video-area">
             {!iframeLoaded ? <div className="iframe-loading"><div className="iframe-spinner" /></div> : null}
             <iframe ref={iframeRef} src={embedUrl} className="player-iframe" allow="autoplay; encrypted-media; fullscreen; picture-in-picture; screen-wake-lock" allowFullScreen sandbox={activeServerInfo.sandboxCompatible ? 'allow-scripts allow-same-origin allow-forms allow-presentation allow-modals allow-pointer-lock' : undefined} referrerPolicy="no-referrer" title={`${title} video player`} key={`${activeServer}-${activeSeason}-${currentEpisode}`} onLoad={() => { clearTimeout(failoverTimerRef.current); setIframeLoaded(true); }} onError={switchToNextServer} />
-
-            <AnimatePresence>
-              {nextCountdown !== null ? (
-                <motion.div className="next-episode-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}>
-                  <span>Up next</span><strong>Next episode in {nextCountdown}s</strong>
-                  <div><button onClick={advanceEpisode}><SkipForward size={14} /> Play now</button><button onClick={() => { autoNextDismissedRef.current = true; setNextCountdown(null); }}>Cancel</button></div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
 
             {type === 'tv' ? (
               <div className="player-bottom-nav">

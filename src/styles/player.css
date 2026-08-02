@@ -153,13 +153,6 @@ html[data-browser='firefox'] .player-overlay * { backdrop-filter: none !importan
 .player-caption-status { min-height: 30px; padding: 0 0.5rem; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 8px; display: inline-flex; align-items: center; gap: 0.35rem; color: rgba(255, 255, 255, 0.45); font-size: 0.59rem; font-weight: 700; }
 .player-next-button { min-height: 36px; padding: 0 0.7rem; border: 1px solid rgba(129, 140, 248, 0.23); border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; background: rgba(99, 102, 241, 0.12); color: #c7d2fe; font: 700 0.65rem inherit; cursor: pointer; }
 .player-next-button:hover { border-color: rgba(129, 140, 248, 0.4); background: rgba(99, 102, 241, 0.22); color: #fff; }
-.next-episode-card { position: absolute; z-index: 14; right: 1.2rem; bottom: 1.2rem; width: min(310px, calc(100% - 2rem)); padding: 1rem; border: 1px solid rgba(129, 140, 248, 0.24); border-radius: 15px; display: grid; gap: 0.32rem; background: rgba(11, 11, 17, 0.96); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62); }
-.next-episode-card > span { color: #8f96ff; font-size: 0.57rem; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
-.next-episode-card > strong { font-size: 0.82rem; }
-.next-episode-card > div { margin-top: 0.6rem; display: grid; grid-template-columns: 1fr 0.7fr; gap: 0.45rem; }
-.next-episode-card button { min-height: 36px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; display: flex; align-items: center; justify-content: center; gap: 0.38rem; background: rgba(255, 255, 255, 0.045); color: rgba(255, 255, 255, 0.66); font: 700 0.63rem inherit; cursor: pointer; }
-.next-episode-card button:first-child { border-color: rgba(129, 140, 248, 0.32); background: #4f46e5; color: #fff; }
-
 @media (max-width: 760px) {
   .player-overlay { padding: 0; }
   .player-shell { width: 100vw; height: 100dvh; border: 0; border-radius: 0; }
@@ -180,7 +173,6 @@ html[data-browser='firefox'] .player-overlay * { backdrop-filter: none !importan
   .player-caption-status { display: none; }
   .player-next-button { width: 42px; padding: 0; flex: 0 0 auto; }
   .player-next-button span { display: none; }
-  .next-episode-card { right: 0.7rem; bottom: max(0.7rem, env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 420px) {

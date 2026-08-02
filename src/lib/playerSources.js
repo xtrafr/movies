@@ -37,10 +37,11 @@ export function buildPlayerUrl({ serverId, type, id, season = 1, episode = 1, st
     url.searchParams.set('lan', subtitleLanguage);
   } else if (source.id === 'apiplayer') {
     url.searchParams.set('autoplay', '1');
-    url.searchParams.set('autonext', '1');
     url.searchParams.set('resume', '0');
     url.searchParams.set('lang', subtitleLanguage);
   }
+
+  if (type === 'tv') url.searchParams.set('autonext', '1');
 
   if (startAt > 0) {
     url.searchParams.set(source.id === 'screenscape' ? 'progress' : 'startAt', String(Math.floor(startAt)));
