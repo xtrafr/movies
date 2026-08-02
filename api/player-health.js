@@ -6,9 +6,24 @@ export default async function handler(request, response) {
     return response.status(405).json({ ok: false, reason: 'Method not allowed' });
   }
 
-  const { server, type, id, season = '1', episode = '1' } = request.query;
+  const url = new URL(request.url, 'http://localhost');
+  const serverValues = url.searchParams.getAll('server');
+  const typeValues = url.searchParams.getAll('type');
+  const idValues = url.searchParams.getAll('id');
+  const server = serverValues[0];
+  const type = typeValues[0];
+  const id = idValues[0];
+  const season = url.searchParams.get('season') || '1';
+  const episode = url.searchParams.get('episode') || '1';
 
-  if (!server || !id || !['movie', 'tv'].includes(type) || Array.isArray(server) || Array.isArray(id)) {
+  if (
+    !server ||
+    !id ||
+    !['movie', 'tv'].includes(type) ||
+    serverValues.length !== 1 ||
+    typeValues.length !== 1 ||
+    idValues.length !== 1
+  ) {
     return response.status(400).json({ ok: false, reason: 'Invalid request' });
   }
 

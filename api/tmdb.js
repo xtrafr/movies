@@ -8,7 +8,9 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: 'Method not allowed' });
   }
 
-  const endpoint = Array.isArray(request.query.path) ? null : request.query.path;
+  const url = new URL(request.url, 'http://localhost');
+  const pathValues = url.searchParams.getAll('path');
+  const endpoint = pathValues.length === 1 ? pathValues[0] : null;
   const result = await requestTmdb({
     endpoint,
     apiKey: runtimeEnv.TMDB_API_KEY || runtimeEnv.VITE_TMDB_API_KEY,
