@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Cloud, LogOut, UserRound } from 'lucide-react';
 import { FaDiscord } from 'react-icons/fa';
 import DocsModal from './DocsModal';
+import AuthModal from './AuthModal';
+import { useAuth } from '../context/AuthContext';
+import { navigate } from '../lib/navigation';
 
 const Navbar = ({ currentFilter, setFilter }) => {
-  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const { user, recoveryMode, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -89,10 +93,32 @@ const Navbar = ({ currentFilter, setFilter }) => {
           >
             <FaDiscord size={15} aria-hidden="true" />
           </a>
+          <div className="account-nav">
+            <button
+              type="button"
+              className={`nav-link account-trigger ${user ? 'signed-in' : ''}`}
+              onClick={() => user ? setShowAccount((open) => !open) : setShowAuth(true)}
+              aria-expanded={user ? showAccount : undefined}
+              aria-label={user ? 'Open account menu' : 'Sign in'}
+              title={user ? user.email : 'Sign in to sync'}
+            >
+              {user ? <Cloud size={14} /> : <UserRound size={14} />}
+              <span>{user ? 'Synced' : 'Sign in'}</span>
+            </button>
+            {user && showAccount ? (
+              <div className="account-menu">
+                <span>Signed in as</span>
+                <strong>{user.email}</strong>
+                <p><Cloud size={13} /> Your library syncs securely.</p>
+                <button type="button" onClick={async () => { setShowAccount(false); await signOut(); }}><LogOut size={14} /> Sign out</button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </nav>
     </motion.header>
     <DocsModal isOpen={showDocs} onClose={() => setShowDocs(false)} />
+    <AuthModal open={showAuth || recoveryMode} onClose={() => setShowAuth(false)} />
     </>
   );
 };

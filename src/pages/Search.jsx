@@ -8,22 +8,40 @@ import PlayerOverlay from '../components/PlayerOverlay';
 import DiscoveryToolbar from '../components/DiscoveryToolbar';
 import MediaShelf from '../components/MediaShelf';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { fetchDiscover, fetchTrending, searchMulti } from '../api/tmdb';
+import TitleDetails from '../components/TitleDetails';
+import { DISCOVER_GENRES, fetchDiscover, fetchDiscoveryShelves, fetchTrending, searchMulti } from '../api/tmdb';
 import {
   clearWatchHistory,
   getContinueWatching,
-  loadLibrary,
   mediaKey,
-  persistLibrary,
   recordWatch,
   toggleSaved,
 } from '../lib/library';
+import useLibrary from '../hooks/useLibrary';
 import '../App.css';
+
+function sortSearchResults(items, sortBy) {
+  if (sortBy === 'trending') return items;
+
+  const sorted = [...items];
+  if (sortBy === 'popularity.desc') return sorted.sort((a, b) => Number(b.popularity || 0) - Number(a.popularity || 0));
+  if (sortBy === 'vote_average.desc') return sorted.sort((a, b) => Number(b.vote_average || 0) - Number(a.vote_average || 0));
+  if (sortBy === 'primary_release_date.desc') {
+    const releaseTime = (item) => Date.parse(item.release_date || item.first_air_date || 0) || 0;
+    return sorted.sort((a, b) => releaseTime(b) - releaseTime(a));
+  }
+  if (sortBy === 'title.asc' || sortBy === 'title.desc') {
+    const direction = sortBy === 'title.asc' ? 1 : -1;
+    return sorted.sort((a, b) => direction * (a.title || a.name || '').localeCompare(b.title || b.name || ''));
+  }
+  return sorted;
+}
 
 function Search() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [detailsMedia, setDetailsMedia] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -33,8 +51,12 @@ function Search() {
   const [view, setView] = useState('discover');
   const [sortBy, setSortBy] = useState('trending');
   const [genre, setGenre] = useState('all');
+  const [year, setYear] = useState('');
+  const [minRating, setMinRating] = useState(0);
+  const [language, setLanguage] = useState('all');
+  const [shelves, setShelves] = useState([]);
   const [retryKey, setRetryKey] = useState(0);
-  const [library, setLibrary] = useState(loadLibrary);
+  const { library, mutateLibrary } = useLibrary();
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
 
   const abortControllerRef = useRef(null);
@@ -45,10 +67,8 @@ function Search() {
     [library.watchlist],
   );
   const continueWatching = useMemo(() => getContinueWatching(library), [library]);
-
-  const mutateLibrary = useCallback((updater) => {
-    setLibrary((current) => persistLibrary(updater(current)));
-  }, []);
+  const hasActiveDiscoveryFilters = genre !== 'all' || Boolean(year) || minRating > 0 || language !== 'all' || sortBy !== 'trending';
+  const showBrowseShelves = view === 'discover' && !searchQuery && !hasActiveDiscoveryFilters;
 
   const lastElementRef = useCallback((node) => {
     if (loading || view !== 'discover') return;
@@ -83,12 +103,15 @@ function Search() {
         let data;
         if (searchQuery) {
           data = await searchMulti(searchQuery, page, { signal: controller.signal });
-        } else if (sortBy === 'trending' && genre === 'all') {
+        } else if (sortBy === 'trending' && genre === 'all' && !year && !minRating && language === 'all') {
           data = await fetchTrending(filter, page, { signal: controller.signal });
         } else {
           data = await fetchDiscover(filter, page, {
             signal: controller.signal,
             genre,
+            year,
+            minRating,
+            language,
             sortBy: sortBy === 'trending' ? 'popularity.desc' : sortBy,
           });
         }
@@ -97,14 +120,34 @@ function Search() {
         if (searchQuery && filter !== 'all') {
           nextResults = nextResults.filter((item) => item.media_type === filter);
         }
+        if (searchQuery && genre !== 'all') {
+          nextResults = nextResults.filter((item) => {
+            const type = item.media_type || (item.name ? 'tv' : 'movie');
+            const genreId = DISCOVER_GENRES[genre]?.[type];
+            return genre === 'anime'
+              ? item.original_language === 'ja' && item.genre_ids?.includes(16)
+              : !genreId || item.genre_ids?.includes(genreId);
+          });
+        }
+        if (searchQuery && year) {
+          nextResults = nextResults.filter((item) => (item.release_date || item.first_air_date || '').startsWith(year));
+        }
+        if (searchQuery && minRating) {
+          nextResults = nextResults.filter((item) => Number(item.vote_average || 0) >= minRating);
+        }
+        if (searchQuery && language !== 'all') {
+          nextResults = nextResults.filter((item) => item.original_language === language);
+        }
         nextResults = nextResults
           .map((item) => ({
             ...item,
             media_type: item.media_type || (filter === 'all' ? (item.name ? 'tv' : 'movie') : filter),
           }))
           .filter((item) => item.media_type !== 'person' && item.poster_path);
-
-        setResults((current) => isAppend ? [...current, ...nextResults] : nextResults);
+        setResults((current) => {
+          const combined = isAppend ? [...current, ...nextResults] : nextResults;
+          return searchQuery ? sortSearchResults(combined, sortBy) : combined;
+        });
         setHasMore(data.page < Math.min(data.total_pages || 1, 40));
       } catch (err) {
         if (err.name !== 'AbortError') setError('The catalog could not be loaded. Please try again.');
@@ -115,12 +158,20 @@ function Search() {
 
     fetchCurrentData();
     return () => controller.abort();
-  }, [filter, genre, page, retryKey, searchQuery, sortBy, view]);
+  }, [filter, genre, language, minRating, page, retryKey, searchQuery, sortBy, view, year]);
 
   useEffect(() => {
-    document.body.style.overflow = selectedMedia ? 'hidden' : 'unset';
+    const controller = new AbortController();
+    fetchDiscoveryShelves(filter, { signal: controller.signal })
+      .then(setShelves)
+      .catch((error) => { if (error.name !== 'AbortError') setShelves([]); });
+    return () => controller.abort();
+  }, [filter]);
+
+  useEffect(() => {
+    document.body.style.overflow = selectedMedia || detailsMedia ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
-  }, [selectedMedia]);
+  }, [detailsMedia, selectedMedia]);
 
   const resetCatalog = useCallback(() => {
     setPage(1);
@@ -150,13 +201,24 @@ function Search() {
   }, []);
 
   const handleCardClick = useCallback((item) => {
-    setSelectedMedia(item);
+    setDetailsMedia(item);
+  }, []);
+
+  const handlePlay = useCallback((item) => {
+    const previous = library.history.find((entry) => mediaKey(entry) === mediaKey(item));
+    setSelectedMedia({ ...item, ...previous });
+    setDetailsMedia(null);
     mutateLibrary((current) => recordWatch(current, item));
-  }, [mutateLibrary]);
+  }, [library.history, mutateLibrary]);
 
   const handleToggleWatchlist = useCallback((item) => {
     mutateLibrary((current) => toggleSaved(current, item));
   }, [mutateLibrary]);
+
+  const handlePlaybackProgress = useCallback((update) => {
+    if (!selectedMedia) return;
+    mutateLibrary((current) => recordWatch(current, selectedMedia, update));
+  }, [mutateLibrary, selectedMedia]);
 
   const libraryResults = useMemo(() => {
     if (view === 'discover') return results;
@@ -194,10 +256,24 @@ function Search() {
           onSortChange={(value) => { setSortBy(value); resetCatalog(); }}
           genre={genre}
           onGenreChange={(value) => { setGenre(value); resetCatalog(); }}
+          year={year}
+          onYearChange={(value) => { setYear(value); resetCatalog(); }}
+          minRating={minRating}
+          onMinRatingChange={(value) => { setMinRating(value); resetCatalog(); }}
+          language={language}
+          onLanguageChange={(value) => { setLanguage(value); resetCatalog(); }}
+          onResetFilters={() => {
+            setGenre('all');
+            setYear('');
+            setMinRating(0);
+            setLanguage('all');
+            setSortBy('trending');
+            resetCatalog();
+          }}
           onClearHistory={() => setConfirmClearHistory(true)}
         />
 
-        {view === 'discover' && !searchQuery ? (
+        {showBrowseShelves ? (
           <MediaShelf
             eyebrow="Pick up where you left off"
             title="Continue watching"
@@ -207,6 +283,18 @@ function Search() {
             savedKeys={savedKeys}
           />
         ) : null}
+
+        {showBrowseShelves ? shelves.map((shelf) => (
+          <MediaShelf
+            key={shelf.id}
+            eyebrow={shelf.eyebrow}
+            title={shelf.title}
+            items={shelf.items}
+            onPlay={handleCardClick}
+            onToggleWatchlist={handleToggleWatchlist}
+            savedKeys={savedKeys}
+          />
+        )) : null}
 
         {error ? (
           <div className="error-message" role="alert">
@@ -218,8 +306,8 @@ function Search() {
         <section className="results-section">
           <div className="section-heading">
             <div>
-              <span>{view === 'discover' ? (searchQuery ? 'Search results' : 'Curated for you') : 'Your personal library'}</span>
-              <h2>{view === 'watchlist' ? 'My list' : view === 'history' ? 'Watch history' : searchQuery ? `Results for “${searchQuery}”` : sortBy === 'trending' ? 'Trending now' : 'Explore titles'}</h2>
+              <span>{view === 'discover' ? (searchQuery ? 'Search results' : hasActiveDiscoveryFilters ? 'Your filters' : 'Curated for you') : 'Your personal library'}</span>
+              <h2>{view === 'watchlist' ? 'My list' : view === 'history' ? 'Watch history' : searchQuery ? `Results for “${searchQuery}”` : hasActiveDiscoveryFilters ? 'Filtered results' : sortBy === 'trending' ? 'Trending now' : 'Explore titles'}</h2>
             </div>
             {libraryResults.length > 0 ? <strong>{libraryResults.length}{view === 'discover' && hasMore ? '+' : ''} titles</strong> : null}
           </div>
@@ -270,10 +358,26 @@ function Search() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {detailsMedia ? (
+          <TitleDetails
+            key={`${detailsMedia.media_type || 'movie'}:${detailsMedia.id}`}
+            item={detailsMedia}
+            isSaved={savedKeys.has(mediaKey(detailsMedia))}
+            savedKeys={savedKeys}
+            onClose={() => setDetailsMedia(null)}
+            onPlay={handlePlay}
+            onToggleWatchlist={handleToggleWatchlist}
+            onSelectRelated={setDetailsMedia}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {selectedMedia ? (
           <PlayerOverlay
             item={selectedMedia}
             onClose={() => setSelectedMedia(null)}
+            onProgress={handlePlaybackProgress}
           />
         ) : null}
       </AnimatePresence>

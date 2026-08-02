@@ -1,6 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { checkPlayerSource } from './server/playerHealth.js'
+import { requestTmdb } from './server/tmdbProxy.js'
 
 const playerHealthPlugin = () => ({
   name: 'moviefy-player-health',
@@ -20,15 +21,53 @@ const playerHealthPlugin = () => ({
   },
 })
 
+const tmdbProxyPlugin = (apiKey) => ({
+  name: 'moviefy-tmdb-proxy',
+  configureServer(server) {
+    server.middlewares.use('/api/tmdb', async (request, response) => {
+      if (request.method !== 'GET') {
+        response.statusCode = 405
+        response.setHeader('Allow', 'GET')
+        response.setHeader('Content-Type', 'application/json')
+        response.end(JSON.stringify({ error: 'Method not allowed' }))
+        return
+      }
+
+      const url = new URL(request.url, 'http://localhost')
+      const result = await requestTmdb({
+        endpoint: url.searchParams.get('path'),
+        apiKey,
+      })
+      response.statusCode = result.status
+      response.setHeader('Content-Type', result.contentType)
+      response.end(result.body)
+    })
+  },
+})
+
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react(), playerHealthPlugin()],
-  server: {
-    proxy: {
-      '/app-data': {
-        target: 'https://umami.tail824e95.ts.net',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/app-data/, ''),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, '.', '')
+  const supabaseUrl = env.VITE_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const supabasePublishableKey = env.VITE_SUPABASE_PUBLISHABLE_KEY
+    || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    || env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    || ''
+  const tmdbApiKey = env.TMDB_API_KEY || env.VITE_TMDB_API_KEY || ''
+
+  return {
+    plugins: [react(), playerHealthPlugin(), tmdbProxyPlugin(tmdbApiKey)],
+    define: {
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
+      'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabasePublishableKey),
+    },
+    server: {
+      proxy: {
+        '/app-data': {
+          target: 'https://umami.tail824e95.ts.net',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/app-data/, ''),
+        }
       }
     }
   }

@@ -20,7 +20,7 @@ const MovieCard = memo(({ item, onClick, onToggleWatchlist, isSaved = false, pro
       onClick={onClick}
       role="button"
       tabIndex={0}
-      aria-label={`Play ${title}`}
+      aria-label={`View details for ${title}`}
       data-umami-event="open-title"
       data-umami-event-media-type={item.media_type || 'movie'}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(); } }}

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
 
 const browser = navigator.userAgent.toLowerCase().includes('firefox') ? 'firefox' : 'other'
 document.documentElement.dataset.browser = browser
@@ -10,7 +11,9 @@ document.documentElement.dataset.browser = browser
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

@@ -2,9 +2,17 @@ import { buildPlayerUrl, PLAYER_SOURCES } from '../src/lib/playerSources.js';
 
 const FAILURE_TEXT = /temporarily rate limited|error\s*1027|video unavailable|content unavailable|access denied|sandbox detected|not found|service unavailable|bad gateway|gateway timeout|captcha|just a moment|checking your browser|verify you are human|attention required/i;
 
+function isPositiveInteger(value, max = Number.MAX_SAFE_INTEGER) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= max;
+}
+
 export async function checkPlayerSource({ serverId, type, id, season, episode }) {
-  if (!PLAYER_SOURCES.some((source) => source.id === serverId)) {
-    return { ok: false, status: 400, reason: 'Unknown source' };
+  if (!PLAYER_SOURCES.some((source) => source.id === serverId)
+    || !['movie', 'tv'].includes(type)
+    || !isPositiveInteger(id, 100000000)
+    || (type === 'tv' && (!isPositiveInteger(season, 1000) || !isPositiveInteger(episode, 10000)))) {
+    return { ok: false, status: 400, reason: 'Invalid source request' };
   }
 
   const controller = new AbortController();

@@ -1,4 +1,16 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://image.tmdb.org https://via.placeholder.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src https://flix.screenscape.me https://apiplayer.ru https://moviesapi.to https://player.embed-api.stream; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/app-data/:match*", "destination": "https://umami.tail824e95.ts.net/:match*" },
     { "source": "/(.*)", "destination": "/index.html" }

@@ -3,11 +3,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ExternalLink, Server, Terminal, X } from 'lucide-react';
 
 const SERVERS = [
-  ['01', 'VidPhantom', 'Primary source'],
-  ['02', 'VidKing', 'Episode support'],
-  ['03', '2Embed', 'Backup source'],
-  ['04', 'VidZee', 'High-quality backup'],
-  ['05', 'VidCore', 'Fallback source'],
+  ['01', 'ScreenScape', 'Primary movie and episode player'],
+  ['02', 'APIPlayer', 'Progress events and auto-next'],
+  ['03', 'MoviesAPI', 'Alternate catalog source'],
+  ['04', 'EmbedAPI', 'Multi-source fallback'],
 ];
 
 const DocsModal = ({ isOpen, onClose }) => {
@@ -35,7 +34,7 @@ const DocsModal = ({ isOpen, onClose }) => {
             <aside className="docs-intro">
               <span className="docs-eyebrow">MovieFY guide</span>
               <h2 id="docs-title">Run it locally.</h2>
-              <p>Connect your TMDB key, start Vite, and browse the same catalog on your own machine.</p>
+              <p>Connect TMDB, start Vite, and browse the full catalog. Supabase is optional for account sync.</p>
 
               <div className="docs-links">
                 <a href="https://github.com/xtrafr/movies" target="_blank" rel="noopener noreferrer" data-umami-event="open-source-code">Source on GitHub <ExternalLink size={13} /></a>
@@ -44,7 +43,7 @@ const DocsModal = ({ isOpen, onClose }) => {
 
               <div className="docs-note">
                 <strong>How playback works</strong>
-                <p>MovieFY opens independent providers and quietly skips a source when its health check or player reports a failure.</p>
+                <p>MovieFY uses popup-restricted players, tracks playback progress, advances episodes, and quietly skips a failed source.</p>
               </div>
             </aside>
 
@@ -52,16 +51,17 @@ const DocsModal = ({ isOpen, onClose }) => {
               <section className="docs-quick-start">
                 <div className="docs-section-heading">
                   <Terminal size={16} />
-                  <div><h3>Quick start</h3><p>Three commands and one environment value.</p></div>
+                  <div><h3>Quick start</h3><p>Install, add your TMDB key, and run locally.</p></div>
                 </div>
                 <pre><code><span>git clone https://github.com/xtrafr/movies.git</span>{'\n'}<span>cd movies && npm install</span>{'\n'}<span>copy .env.example .env</span>{'\n'}<span>npm run dev</span></code></pre>
-                <div className="docs-env"><span>.env</span><code>VITE_TMDB_API_KEY=your_key</code></div>
+                <div className="docs-env"><span>.env</span><code>TMDB_API_KEY=your_key</code></div>
+                <div className="docs-env"><span>optional</span><code>VITE_SUPABASE_URL + PUBLISHABLE_KEY</code></div>
               </section>
 
               <section className="docs-servers">
                 <div className="docs-section-heading">
                   <Server size={16} />
-                  <div><h3>Playback sources</h3><p>Select one manually or let MovieFY switch automatically.</p></div>
+                  <div><h3>Popup-restricted sources</h3><p>Select one manually or let MovieFY switch automatically.</p></div>
                 </div>
                 <div className="docs-server-list">
                   {SERVERS.map(([number, name, note]) => (

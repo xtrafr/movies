@@ -1,25 +1,25 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Bookmark, Captions, Code, Play, Search as SearchIcon, ShieldCheck } from 'lucide-react';
 import DotGrid from '../components/DotGrid';
 import '../App.css';
+import { navigate } from '../lib/navigation';
 
 const FEATURES = [
   {
     icon: ShieldCheck,
     title: 'Playback that recovers',
-    copy: 'MovieFY rotates through five sources when a player reports a failure or times out.',
+    copy: 'MovieFY moves between popup-restricted sources when a player reports a failure or times out.',
   },
   {
     icon: Captions,
     title: 'Quality and captions',
-    copy: 'Five playback sources, automatic health checks, and a Firefox smooth mode live in one compact player.',
+    copy: 'Captions, adaptive quality, playback progress, and a Firefox smooth mode live in one compact player.',
   },
   {
     icon: Bookmark,
     title: 'A library that stays yours',
-    copy: 'My List, watch history, and resume progress stay on your device. No account required.',
+    copy: 'Use MovieFY without an account, or sign in to sync My List, history, episodes, and progress.',
   },
 ];
 
@@ -30,7 +30,6 @@ const POSTERS = [
 ];
 
 const Landing = () => {
-  const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
   const rotateX = useTransform(scrollYProgress, [0, 0.4], [8, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.4], [0.92, 1]);
@@ -57,7 +56,7 @@ const Landing = () => {
       <main className="landing-content">
         <section className="landing-hero">
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}>
-            <div className="landing-proof"><span>Adaptive HD</span><span>Subtitles</span><span>No account</span></div>
+            <div className="landing-proof"><span>Adaptive HD</span><span>Subtitles</span><span>Optional sync</span></div>
             <h1 className="modern-title">
               Your next favorite story,<br /><span className="hero-accent">ready when you are.</span>
             </h1>
@@ -90,7 +89,7 @@ const Landing = () => {
 
         <section className="landing-stats-container" aria-label="Product highlights">
           <div className="landing-stats-inner">
-            {[['Sources', '5'], ['Episodes', 'Auto'], ['Captions', 'CC'], ['Library', 'Local']].map(([label, value], index) => (
+            {[['Safe sources', '4'], ['Episodes', 'Auto'], ['Captions', 'CC'], ['Library', 'Sync']].map(([label, value], index) => (
               <React.Fragment key={label}>
                 {index > 0 ? <div className="stat-line" /> : null}
                 <div className="stat-item"><div className="stat-label">{label}</div><div className="stat-number">{value}</div></div>
@@ -113,7 +112,7 @@ const Landing = () => {
             ))}
           </div>
           <div className="landing-final-cta">
-            <p>No sign-up. Your list and history stay in this browser.</p>
+            <p>Start without an account. Sign in only when you want your library on every screen.</p>
             <button className="modern-btn primary" onClick={() => openApp('footer')}><Play size={16} fill="currentColor" /> Open MovieFY</button>
           </div>
         </section>
