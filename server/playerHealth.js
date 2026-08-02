@@ -30,6 +30,14 @@ export async function checkPlayerSource({ serverId, type, id, season, episode })
     });
 
     const body = await response.text();
+    if ([401, 403].includes(response.status)) {
+      return {
+        ok: true,
+        status: response.status,
+        unverified: true,
+        reason: 'Provider requires a browser request',
+      };
+    }
     const failed = !response.ok || body.length < 250 || FAILURE_TEXT.test(body.slice(0, 100000));
     return {
       ok: !failed,
