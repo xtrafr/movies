@@ -40,7 +40,7 @@ MovieFY is a responsive React app for discovering TMDB titles, opening popup-res
 - Automatic provider health checks, error detection, and timeout fallback
 - Sandboxed embeds that block popup and top-window navigation
 - Season and episode selectors for TV shows
-- Automatic next episode with a visible countdown and cancel action
+- Mandatory next episode when playback finishes, including season boundaries
 - Subtitle, adaptive quality, resume, and playback-event support through the selected player
 - My List, history, episodes, and progress stored locally by default
 - Optional email accounts with secure Supabase synchronization
@@ -77,7 +77,10 @@ Apply the included secure schema once:
 
 ```bash
 npm run db:migrate
+npm run db:verify
 ```
+
+For public email registration, configure a custom SMTP provider in Supabase under Authentication, Emails, SMTP Settings. Supabase's built-in sender is intended only for initial testing and has a very small shared email quota. Keep email confirmation enabled.
 
 Vite will print the local address, normally [http://localhost:5173](http://localhost:5173).
 
@@ -92,7 +95,7 @@ MovieFY does not host video files. It embeds independent providers that accept T
 | MoviesAPI | Alternate catalog source |
 | EmbedAPI | Multi-source fallback |
 
-Every playback session starts on source 1. MovieFY checks that source through `/api/player-health` and advances only when the automatically selected source returns an error page or cannot be reached. A source selected manually is respected instead of being overridden by the preflight check. Providers that expose playback events also keep resume progress accurate and trigger the next-episode countdown.
+Every playback session starts on source 1. MovieFY checks that source through `/api/player-health` and advances only when the automatically selected source returns an error page or cannot be reached. A source selected manually is respected instead of being overridden by the preflight check. TV sources receive mandatory auto-next instructions, while completion events and near-end progress signals immediately move MovieFY to the next episode.
 
 All four sources run inside a browser sandbox without `allow-popups` or top-navigation permissions. Providers that require an unrestricted iframe are intentionally not included.
 
@@ -144,7 +147,8 @@ Update the website ID in `index.html` if you deploy your own copy. Update the pr
 2. Add `TMDB_API_KEY` to the project environment variables. Existing deployments using `VITE_TMDB_API_KEY` remain compatible, but the server-only name is recommended.
 3. Connect Supabase through the Vercel Marketplace if you want account sync.
 4. Apply `supabase/migrations/202608020001_user_library.sql` to the connected database.
-5. Deploy.
+5. Configure custom SMTP in Supabase before opening registration to the public.
+6. Deploy.
 
 The included `vercel.json` provides SPA routing and the same-origin analytics proxy.
 
@@ -164,6 +168,8 @@ npm run lint
 npm run build
 npm run preview
 npm run db:migrate
+npm run db:verify
+npm run auth:verify
 ```
 
 ## Legal

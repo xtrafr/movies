@@ -10,6 +10,26 @@ const copy = {
   update: { title: 'New password', description: 'Use at least 10 characters.', action: 'Update password' },
 };
 
+function getFriendlyAuthError(error, activeMode) {
+  const message = error?.message || 'Something went wrong. Please try again.';
+  const rateLimited = error?.status === 429
+    || /rate limit|too many requests|over_email_send_rate_limit/i.test(`${error?.code || ''} ${message}`);
+
+  if (rateLimited && activeMode === 'signin') {
+    return 'Too many sign-in attempts. Wait a moment, then try again.';
+  }
+  if (rateLimited) {
+    return 'Account emails are temporarily at capacity. Please try again later.';
+  }
+  if (/email not confirmed/i.test(message)) {
+    return 'Confirm your email before signing in. Check your inbox for the confirmation link.';
+  }
+  if (/invalid login credentials/i.test(message)) {
+    return 'The email or password is incorrect.';
+  }
+  return message;
+}
+
 export default function AuthModal({ open, onClose }) {
   const { configured, recoveryMode, signIn, signUp, sendPasswordReset, updatePassword, finishRecovery } = useAuth();
   const [mode, setMode] = useState('signin');
@@ -57,7 +77,7 @@ export default function AuthModal({ open, onClose }) {
     setBusy(false);
 
     if (result.error) {
-      setError(result.error.message);
+      setError(getFriendlyAuthError(result.error, activeMode));
       return;
     }
     if (activeMode === 'signin' || activeMode === 'update') {

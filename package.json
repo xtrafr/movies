@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "db:migrate": "node --env-file=.env.local scripts/apply-supabase-migration.mjs",
+    "db:verify": "node --env-file=.env.local scripts/verify-supabase-schema.mjs",
     "auth:verify": "node --env-file=.env.local scripts/verify-supabase-auth.mjs",
     "player:verify": "node scripts/verify-player-events.mjs"
   },

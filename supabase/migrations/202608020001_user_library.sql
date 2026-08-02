@@ -25,6 +25,7 @@ create index if not exists user_library_history_idx
 alter table public.user_library enable row level security;
 
 revoke all on table public.user_library from anon;
+revoke all on table public.user_library from authenticated;
 grant select, insert, update, delete on table public.user_library to authenticated;
 
 drop policy if exists "Users can read their own library" on public.user_library;
@@ -68,6 +69,7 @@ create table if not exists public.user_preferences (
 alter table public.user_preferences enable row level security;
 
 revoke all on table public.user_preferences from anon;
+revoke all on table public.user_preferences from authenticated;
 grant select, insert, update, delete on table public.user_preferences to authenticated;
 
 drop policy if exists "Users can read their own preferences" on public.user_preferences;
