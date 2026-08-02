@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen } from 'lucide-react';
+import { FaDiscord } from 'react-icons/fa';
 import DocsModal from './DocsModal';
 
 const Navbar = ({ currentFilter, setFilter }) => {
@@ -77,6 +78,17 @@ const Navbar = ({ currentFilter, setFilter }) => {
             <BookOpen size={13} />
             <span className="docs-label">Docs</span>
           </button>
+          <a
+            href="https://discord.gg/Mhx9fVtth5"
+            target="_blank"
+            rel="noreferrer"
+            className="nav-link discord-link"
+            title="Join the Discord"
+            aria-label="Join the MovieFY Discord"
+            data-umami-event="open-discord"
+          >
+            <FaDiscord size={15} aria-hidden="true" />
+          </a>
         </div>
       </nav>
     </motion.header>

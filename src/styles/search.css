@@ -81,6 +81,20 @@
   gap: 0.35rem;
 }
 
+.discord-link {
+  width: 32px;
+  padding-inline: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(199, 210, 254, 0.72);
+}
+
+.discord-link:hover {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.12);
+}
+
 .hero {
   text-align: center;
   margin: 10rem 0 5rem;
